@@ -22,7 +22,7 @@ const mixedYamlParser = yamlParser.configure({
 
 const mixedYaml = LRLanguage.define({ parser: mixedYamlParser });
 
-console.log(JSCPP);
+// console.log(JSCPP);
 
 interface ESPHomeConfig {
   [key: string]: unknown;
@@ -56,7 +56,7 @@ const defaultSrc = `display:
   - platform: ili9xxx
     model: S3BOX
     lambda: |-
-      it.line(0, 0, 50, 50);
+      it.line(50, 50, 150, 150);
 `;
 
 let context: { doc: { children: unknown[] } };
@@ -70,8 +70,7 @@ const config = {
   includes: {
     "display.h": {
       load: function (rt: CRuntime) {
-        console.log("load", rt);
-
+        // console.log("load", rt);
         const DisplayIt = rt.newClass("DisplayIt", []);
 
         const _line = function (
@@ -82,9 +81,6 @@ const config = {
           x2: Variable,
           y2: Variable,
         ) {
-          console.log("_this", _this);
-          console.log("x1", x1);
-          console.log(`line(${x1.v}, ${y1.v}, ${x2.v}, ${y2.v})`);
           context.doc.children.push({
             type: "line",
             x1: x1.v,
@@ -140,7 +136,7 @@ export default function Index() {
       setError(error as Error);
     }
   }, [src]);
-  console.log(parsed);
+  // console.log(parsed);
 
   const display = parsed.display?.[0];
   const pages = display?.pages;
@@ -165,7 +161,7 @@ export default function Index() {
       console.log(error);
       setError(error as Error);
     }
-    console.log(context);
+    // console.log(context);
   }, [lambda]);
 
   return (
