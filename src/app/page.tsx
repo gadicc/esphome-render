@@ -1,95 +1,103 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import React from "react";
+import { parse } from "yaml";
+import JSCPP, { CRuntime } from "JSCPP";
+console.log(JSCPP);
+
+const models = {
+  ili9xxx: {
+    S3BOX: {
+      width: 320,
+      height: 240,
+    },
+  },
+};
+
+//import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
+
+const src = `
+display:
+  - platform: ili9xxx
+    model: S3BOX
+    lambda: |-
+      it.line(0, 0, 50, 50);
+`;
+
+const parsed = parse(src.replace(/(\S)#/g, "$1 #"));
+
+const config = {
+  includes: {
+    "myheader.h": {
+      load: function (rt: CRuntime) {
+        console.log("load", rt);
+
+        const it_line = function (
+          rt: CRuntime,
+          _this: unknown,
+          x1: number,
+          x2: number,
+          y1: number,
+          y2: number,
+        ) {
+          console.log("_this", _this);
+          console.log("x1", x1);
+          console.log(`line(${x1.v}, ${y1.v}, ${x2.v}, ${y2.v})`);
+        };
+
+        rt.regFunc(
+          it_line,
+          "global",
+          "it_line",
+          [
+            rt.intTypeLiteral,
+            rt.intTypeLiteral,
+            rt.intTypeLiteral,
+            rt.intTypeLiteral,
+          ],
+          rt.intTypeLiteral,
+        );
+      },
+    },
+  },
+};
+
+function process(parsed: any) {
+  const display = parsed.display[0];
+  const pages = display.pages;
+  const pageIds = pages ? pages.map((page) => page.id) : [];
+  return { display, pages, pageIds };
+}
+
+export default function Index() {
+  const { display, pages, pageIds } = process(parsed);
+  const [currentPageId, setCurrentPageId] = React.useState(pages?.[0] ?? "");
+  console.log(parsed);
+  console.log(pageIds);
+
+  const lambda = display.lambda;
+  const code =
+    '#include "myheader.h"\nint main() {\n' +
+    lambda.replace(/it\.line/g, "it_line") +
+    "\nreturn 0;\n}";
+  console.log(code);
+  const interpreter = JSCPP.run(code, "", config);
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    <div>
+      <select
+        name="currentPageId"
+        id="currentPageId"
+        value={currentPageId}
+        onChange={(e) => setCurrentPageId(e.target.value)}
+      >
+        {pageIds.map((pageId) => (
+          <option key={pageId} value={pageId}>
+            {pageId}
+          </option>
+        ))}
+      </select>
+      <h1>Page</h1>
+    </div>
   );
 }
