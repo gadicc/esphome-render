@@ -4,6 +4,10 @@ import React from "react";
 import { parse } from "yaml";
 // @ts-expect-error: :/
 import JSCPP, { CRuntime, Variable } from "JSCPP";
+import Split from "@uiw/react-split";
+import CodeMirror from "@uiw/react-codemirror";
+import { yaml } from "@codemirror/lang-yaml";
+import { cpp } from "@codemirror/lang-cpp";
 import { Render } from "./jrt";
 
 console.log(JSCPP);
@@ -36,15 +40,12 @@ const models: {
 
 // import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
 
-const src = `
-display:
+const defaultSrc = `display:
   - platform: ili9xxx
     model: S3BOX
     lambda: |-
       it.line(0, 0, 50, 50);
 `;
-
-const parsed = parse(src.replace(/(\S)#/g, "$1 #")) as ESPHomeConfig;
 
 let context: { doc: { children: unknown[] } };
 function initContext() {
@@ -98,57 +99,98 @@ const config = {
   },
 };
 
-function process(parsed: ESPHomeConfig) {
-  const display = parsed.display[0];
-  const pages = display.pages;
-  const pageIds = pages ? pages.map((page) => page.id) : [];
-  return { display, pages, pageIds };
-}
+const extensions = [yaml(), cpp()];
 
-export default function Index() {
-  console.log(parsed);
-
-  const { display, pages, pageIds } = process(parsed);
-  const [currentPageId, setCurrentPageId] = React.useState(pages?.[0] ?? "");
-  const model = models[display.platform][display.model];
-
-  const page = pages?.find((page) => page.id === currentPageId);
-  const lambda = (page ? page.lambda : display.lambda) ?? "";
-
-  const code = `
+function wrapLambda(lambda: string) {
+  return `
   #include "display.h"
   int main() {
     DisplayIt it;
     ${lambda}
     return 0;
   }`;
-  console.log(code);
+}
+initContext();
 
-  initContext();
-  const interpreter = JSCPP.run(code, "", config);
-  console.log(context);
+export default function Index() {
+  const [src, setSrc] = React.useState(defaultSrc);
+  const [parsed, setParsed] = React.useState({} as ESPHomeConfig);
+  const [error, setError] = React.useState<Error | null>(null);
+  const [doc, setDoc] = React.useState({ children: [] });
+
+  React.useEffect(() => {
+    try {
+      setParsed(parse(src.replace(/(\S)#/g, "$1 #")));
+      setError(null);
+    } catch (error) {
+      console.log(error);
+      setError(error as Error);
+    }
+  }, [src]);
+  console.log(parsed);
+
+  const display = parsed.display?.[0];
+  const pages = display?.pages;
+  const pageIds = pages ? pages.map((page) => page.id) : [];
+
+  const [currentPageId, setCurrentPageId] = React.useState(pages?.[0].id ?? "");
+  const model = display && models[display.platform][display.model];
+  const { width, height } = model ?? { width: 256, height: 256 };
+
+  const page = pages?.find((page) => page.id === currentPageId);
+  const lambda = (page ? page.lambda : display?.lambda) ?? "";
+
+  React.useEffect(() => {
+    initContext();
+    const code = wrapLambda(lambda);
+    try {
+      const interpreter = JSCPP.run(code, "", config);
+      // @ts-expect-error: :/
+      setDoc(context.doc);
+      setError(null);
+    } catch (error) {
+      console.log(error);
+      setError(error as Error);
+    }
+    console.log(context);
+  }, [lambda]);
 
   return (
-    <div>
-      <select
-        name="currentPageId"
-        id="currentPageId"
-        value={currentPageId}
-        onChange={(e) => setCurrentPageId(e.target.value)}
-      >
-        {pageIds.map((pageId) => (
-          <option key={pageId} value={pageId}>
-            {pageId}
-          </option>
-        ))}
-      </select>
-      <h1>Page</h1>
-      <svg
-        style={{ border: "1px solid black", width: 300 }}
-        viewBox={`0 0 ${model.width} ${model.height}`}
-      >
-        <Render doc={context.doc} />
-      </svg>
+    <div style={{ width: "100%", height: "100%" }}>
+      <Split>
+        <div style={{ width: "50%" }}>
+          <CodeMirror value={src} onChange={setSrc} extensions={extensions} />
+          {error && (
+            <div style={{ padding: 5 }}>
+              {error.name}: {error.message}
+            </div>
+          )}
+        </div>
+        <div style={{ padding: 15 }}>
+          <svg
+            style={{ border: "1px solid black", width: 300 }}
+            viewBox={`0 0 ${width} ${height}`}
+          >
+            <Render doc={context.doc} />
+          </svg>
+          <div>
+            Model: {display?.model ?? "Unknown"} ({width}x{height})
+          </div>
+          <br />
+          <select
+            name="currentPageId"
+            id="currentPageId"
+            value={currentPageId}
+            onChange={(e) => setCurrentPageId(e.target.value)}
+          >
+            {pageIds.map((pageId) => (
+              <option key={pageId} value={pageId}>
+                {pageId}
+              </option>
+            ))}
+          </select>
+        </div>
+      </Split>
     </div>
   );
 }
