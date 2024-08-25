@@ -6,9 +6,21 @@ import { parse } from "yaml";
 import JSCPP, { CRuntime, Variable } from "JSCPP";
 import Split from "@uiw/react-split";
 import CodeMirror from "@uiw/react-codemirror";
-import { yaml } from "@codemirror/lang-yaml";
-import { cpp } from "@codemirror/lang-cpp";
 import { Render } from "./jrt";
+
+import { parser as yamlParser } from "@lezer/yaml";
+import { parser as cppParser } from "@lezer/cpp";
+import { parseMixed } from "@lezer/common";
+import { LRLanguage } from "@codemirror/language";
+
+const mixedYamlParser = yamlParser.configure({
+  wrap: parseMixed((node) => {
+    // console.log(node.from, node.name, node);
+    return node.name === "BlockLiteralContent" ? { parser: cppParser } : null;
+  }),
+});
+
+const mixedYaml = LRLanguage.define({ parser: mixedYamlParser });
 
 console.log(JSCPP);
 
@@ -99,7 +111,8 @@ const config = {
   },
 };
 
-const extensions = [yaml(), cpp()];
+// const extensions = [yaml(), cpp()];
+const extensions = [mixedYaml];
 
 function wrapLambda(lambda: string) {
   return `

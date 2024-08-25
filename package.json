@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@codemirror/lang-cpp": "^6.0.2",
-    "@codemirror/lang-yaml": "^6.1.1",
+    "@lezer/common": "^1.2.1",
+    "@lezer/cpp": "^1.1.2",
+    "@lezer/yaml": "^1.0.3",
     "@uiw/react-codemirror": "^4.23.0",
     "@uiw/react-split": "^5.9.3",
     "JSCPP": "^2.0.9",
