@@ -55,11 +55,13 @@ function initContext() {
 
 const config = {
   includes: {
-    "myheader.h": {
+    "display.h": {
       load: function (rt: CRuntime) {
         console.log("load", rt);
 
-        const it_line = function (
+        const DisplayIt = rt.newClass("DisplayIt", []);
+
+        const _line = function (
           rt: CRuntime,
           _this: Variable,
           x1: Variable,
@@ -80,9 +82,9 @@ const config = {
         };
 
         rt.regFunc(
-          it_line,
-          "global",
-          "it_line",
+          _line,
+          DisplayIt,
+          "line",
           [
             rt.intTypeLiteral,
             rt.intTypeLiteral,
@@ -113,10 +115,13 @@ export default function Index() {
   const page = pages?.find((page) => page.id === currentPageId);
   const lambda = (page ? page.lambda : display.lambda) ?? "";
 
-  const code =
-    '#include "myheader.h"\nint main() {\n' +
-    lambda.replace(/it\.line/g, "it_line") +
-    "\nreturn 0;\n}";
+  const code = `
+  #include "display.h"
+  int main() {
+    DisplayIt it;
+    ${lambda}
+    return 0;
+  }`;
   console.log(code);
 
   initContext();
