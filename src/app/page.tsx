@@ -2,10 +2,30 @@
 
 import React from "react";
 import { parse } from "yaml";
-import JSCPP, { CRuntime } from "JSCPP";
+// @ts-expect-error: :/
+import JSCPP, { CRuntime, Variable } from "JSCPP";
+import { Render } from "./jrt";
+
 console.log(JSCPP);
 
-const models = {
+interface ESPHomeConfig {
+  [key: string]: unknown;
+  display: [
+    {
+      platform: string;
+      model: string;
+      lambda?: string;
+      pages?: {
+        id: string;
+        lambda: string;
+      }[];
+    },
+  ];
+}
+
+const models: {
+  [key: string]: { [key: string]: { width: number; height: number } };
+} = {
   ili9xxx: {
     S3BOX: {
       width: 320,
@@ -14,7 +34,7 @@ const models = {
   },
 };
 
-//import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
+// import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
 
 const src = `
 display:
@@ -24,7 +44,14 @@ display:
       it.line(0, 0, 50, 50);
 `;
 
-const parsed = parse(src.replace(/(\S)#/g, "$1 #"));
+const parsed = parse(src.replace(/(\S)#/g, "$1 #")) as ESPHomeConfig;
+
+let context: { doc: { children: unknown[] } };
+function initContext() {
+  context = {
+    doc: { children: [] },
+  };
+}
 
 const config = {
   includes: {
@@ -34,15 +61,22 @@ const config = {
 
         const it_line = function (
           rt: CRuntime,
-          _this: unknown,
-          x1: number,
-          x2: number,
-          y1: number,
-          y2: number,
+          _this: Variable,
+          x1: Variable,
+          y1: Variable,
+          x2: Variable,
+          y2: Variable,
         ) {
           console.log("_this", _this);
           console.log("x1", x1);
           console.log(`line(${x1.v}, ${y1.v}, ${x2.v}, ${y2.v})`);
+          context.doc.children.push({
+            type: "line",
+            x1: x1.v,
+            y1: y1.v,
+            x2: x2.v,
+            y2: y2.v,
+          });
         };
 
         rt.regFunc(
@@ -62,7 +96,7 @@ const config = {
   },
 };
 
-function process(parsed: any) {
+function process(parsed: ESPHomeConfig) {
   const display = parsed.display[0];
   const pages = display.pages;
   const pageIds = pages ? pages.map((page) => page.id) : [];
@@ -70,18 +104,24 @@ function process(parsed: any) {
 }
 
 export default function Index() {
+  console.log(parsed);
+
   const { display, pages, pageIds } = process(parsed);
   const [currentPageId, setCurrentPageId] = React.useState(pages?.[0] ?? "");
-  console.log(parsed);
-  console.log(pageIds);
+  const model = models[display.platform][display.model];
 
-  const lambda = display.lambda;
+  const page = pages?.find((page) => page.id === currentPageId);
+  const lambda = (page ? page.lambda : display.lambda) ?? "";
+
   const code =
     '#include "myheader.h"\nint main() {\n' +
     lambda.replace(/it\.line/g, "it_line") +
     "\nreturn 0;\n}";
   console.log(code);
+
+  initContext();
   const interpreter = JSCPP.run(code, "", config);
+  console.log(context);
 
   return (
     <div>
@@ -98,6 +138,12 @@ export default function Index() {
         ))}
       </select>
       <h1>Page</h1>
+      <svg
+        style={{ border: "1px solid black", width: 300 }}
+        viewBox={`0 0 ${model.width} ${model.height}`}
+      >
+        <Render doc={context.doc} />
+      </svg>
     </div>
   );
 }
