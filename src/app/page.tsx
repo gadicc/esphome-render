@@ -2,11 +2,10 @@
 
 import React from "react";
 import { parse } from "yaml";
-// @ts-expect-error: :/
-import JSCPP, { CRuntime, Variable } from "JSCPP";
 import Split from "@uiw/react-split";
 import CodeMirror from "@/lib/codemirror";
 import { getModel } from "@/lib/models";
+import { run } from "@/lib/jscpp";
 import { Render } from "./jrt";
 
 // console.log(JSCPP);
@@ -42,94 +41,13 @@ globals:
     initial_value: 10
 `;
 
-let context: { doc: { children: unknown[] } };
-function initContext() {
-  context = {
-    doc: { children: [] },
-  };
-}
-
-const config = {
-  includes: {
-    "id.h": {
-      load: function (rt: CRuntime) {
-        const pchar = rt.normalPointerType(rt.charTypeLiteral);
-
-        console.log(rt);
-        const _id = function (
-          rt: CRuntime,
-          _this: Variable,
-          nameVar: Variable,
-        ) {
-          const vt = nameVar.v.target as Variable[];
-          const name = vt
-            .slice(0, vt.length - 1)
-            .map((v) => String.fromCharCode(v.v))
-            .join("");
-
-          console.log('id("' + name + '")');
-          return rt.val(rt.intTypeLiteral, 0);
-        };
-
-        rt.regFunc(_id, "global", "id", [pchar], rt.intTypeLiteral);
-      },
-    },
-    "display.h": {
-      load: function (rt: CRuntime) {
-        // console.log("load", rt);
-        const DisplayIt = rt.newClass("DisplayIt", []);
-
-        const _line = function (
-          rt: CRuntime,
-          _this: Variable,
-          x1: Variable,
-          y1: Variable,
-          x2: Variable,
-          y2: Variable,
-        ) {
-          context.doc.children.push({
-            type: "line",
-            x1: x1.v,
-            y1: y1.v,
-            x2: x2.v,
-            y2: y2.v,
-          });
-        };
-
-        rt.regFunc(
-          _line,
-          DisplayIt,
-          "line",
-          [
-            rt.intTypeLiteral,
-            rt.intTypeLiteral,
-            rt.intTypeLiteral,
-            rt.intTypeLiteral,
-          ],
-          rt.intTypeLiteral,
-        );
-      },
-    },
-  },
-};
-
-function preprocessLambda(lambda: string) {
-  return `
-  #include "id.h"
-  #include "display.h"
-  int main() {
-    DisplayIt it;
-    ${lambda.replace(/id\((\w+)\)/g, 'id("$1")')}
-    return 0;
-  }`;
-}
-initContext();
-
 export default function Index() {
   const [src, setSrc] = React.useState(defaultSrc);
   const [parsed, setParsed] = React.useState({} as ESPHomeConfig);
   const [error, setError] = React.useState<Error | null>(null);
-  const [doc, setDoc] = React.useState({ children: [] });
+  const [doc, setDoc] = React.useState<ReturnType<typeof run>["doc"]>({
+    children: [],
+  });
 
   React.useEffect(() => {
     try {
@@ -159,13 +77,10 @@ export default function Index() {
   }, [lambda]);
 
   React.useEffect(() => {
-    initContext();
-    const code = preprocessLambda(lambda);
-    // console.log(code);
     try {
-      const interpreter = JSCPP.run(code, "", config);
-      // @ts-expect-error: :/
-      setDoc(context.doc);
+      const { doc } = run(lambda);
+      console.log("setDoc", doc);
+      setDoc(doc);
       setError(null);
     } catch (error) {
       console.log(error);
@@ -173,6 +88,7 @@ export default function Index() {
     }
     // console.log(context);
   }, [lambda]);
+  console.log("doc", doc);
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
@@ -190,7 +106,7 @@ export default function Index() {
             style={{ border: "1px solid black", width: 300 }}
             viewBox={`0 0 ${width} ${height}`}
           >
-            <Render doc={context.doc} />
+            <Render doc={doc} />
           </svg>
           <div>
             Model: {display?.model ?? "Unknown"} ({width}x{height})
