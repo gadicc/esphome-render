@@ -5,22 +5,8 @@ import { parse } from "yaml";
 // @ts-expect-error: :/
 import JSCPP, { CRuntime, Variable } from "JSCPP";
 import Split from "@uiw/react-split";
-import CodeMirror from "@uiw/react-codemirror";
 import { Render } from "./jrt";
-
-import { parser as yamlParser } from "@lezer/yaml";
-import { parser as cppParser } from "@lezer/cpp";
-import { parseMixed } from "@lezer/common";
-import { LRLanguage } from "@codemirror/language";
-
-const mixedYamlParser = yamlParser.configure({
-  wrap: parseMixed((node) => {
-    // console.log(node.from, node.name, node);
-    return node.name === "BlockLiteralContent" ? { parser: cppParser } : null;
-  }),
-});
-
-const mixedYaml = LRLanguage.define({ parser: mixedYamlParser });
+import CodeMirror from "@/lib/codemirror";
 
 // console.log(JSCPP);
 
@@ -57,6 +43,13 @@ const defaultSrc = `display:
     model: S3BOX
     lambda: |-
       it.line(50, 50, 150, 150);
+globals:
+  - id: bool1
+    type: bool
+    initial_value: false
+  - id: int1
+    type: int
+    initial_value: 10
 `;
 
 let context: { doc: { children: unknown[] } };
@@ -68,6 +61,29 @@ function initContext() {
 
 const config = {
   includes: {
+    "id.h": {
+      load: function (rt: CRuntime) {
+        const pchar = rt.normalPointerType(rt.charTypeLiteral);
+
+        console.log(rt);
+        const _id = function (
+          rt: CRuntime,
+          _this: Variable,
+          nameVar: Variable,
+        ) {
+          const vt = nameVar.v.target as Variable[];
+          const name = vt
+            .slice(0, vt.length - 1)
+            .map((v) => String.fromCharCode(v.v))
+            .join("");
+
+          console.log('id("' + name + '")');
+          return rt.val(rt.intTypeLiteral, 0);
+        };
+
+        rt.regFunc(_id, "global", "id", [pchar], rt.intTypeLiteral);
+      },
+    },
     "display.h": {
       load: function (rt: CRuntime) {
         // console.log("load", rt);
@@ -107,15 +123,13 @@ const config = {
   },
 };
 
-// const extensions = [yaml(), cpp()];
-const extensions = [mixedYaml];
-
-function wrapLambda(lambda: string) {
+function preprocessLambda(lambda: string) {
   return `
+  #include "id.h"
   #include "display.h"
   int main() {
     DisplayIt it;
-    ${lambda}
+    ${lambda.replace(/id\((\w+)\)/g, 'id("$1")')}
     return 0;
   }`;
 }
@@ -150,8 +164,14 @@ export default function Index() {
   const lambda = (page ? page.lambda : display?.lambda) ?? "";
 
   React.useEffect(() => {
+    // const parsed = cppParser.parse(lambda);
+    // console.log(parsed);
+  }, [lambda]);
+
+  React.useEffect(() => {
     initContext();
-    const code = wrapLambda(lambda);
+    const code = preprocessLambda(lambda);
+    // console.log(code);
     try {
       const interpreter = JSCPP.run(code, "", config);
       // @ts-expect-error: :/
@@ -168,7 +188,7 @@ export default function Index() {
     <div style={{ width: "100%", height: "100%" }}>
       <Split>
         <div style={{ width: "50%" }}>
-          <CodeMirror value={src} onChange={setSrc} extensions={extensions} />
+          <CodeMirror value={src} onChange={setSrc} />
           {error && (
             <div style={{ padding: 5 }}>
               {error.name}: {error.message}
