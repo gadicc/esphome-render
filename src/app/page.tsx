@@ -6,24 +6,10 @@ import Split from "@uiw/react-split";
 import CodeMirror from "@/lib/codemirror";
 import { getModel } from "@/lib/models";
 import { run } from "@/lib/jscpp";
+import type { ESPHomeConfig } from "@/lib/ESPHomeConfig";
 import { Render } from "./jrt";
 
 // console.log(JSCPP);
-
-interface ESPHomeConfig {
-  [key: string]: unknown;
-  display: [
-    {
-      platform: string;
-      model: string;
-      lambda?: string;
-      pages?: {
-        id: string;
-        lambda: string;
-      }[];
-    },
-  ];
-}
 
 // import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
 
@@ -78,8 +64,7 @@ export default function Index() {
 
   React.useEffect(() => {
     try {
-      const { doc } = run(lambda);
-      console.log("setDoc", doc);
+      const { doc } = run(lambda, parsed.globals);
       setDoc(doc);
       setError(null);
     } catch (error) {
@@ -87,8 +72,7 @@ export default function Index() {
       setError(error as Error);
     }
     // console.log(context);
-  }, [lambda]);
-  console.log("doc", doc);
+  }, [lambda, parsed.globals]);
 
   return (
     <div style={{ width: "100%", height: "100%" }}>

@@ -2,6 +2,7 @@ import React from "react";
 
 // @ts-expect-error: :/
 import JSCPP, { CRuntime, Variable } from "JSCPP";
+import { ESPHomeConfig } from "./ESPHomeConfig";
 
 let context: { doc: { children: unknown[] } };
 function initContext() {
@@ -16,7 +17,6 @@ const config = {
       load: function (rt: CRuntime) {
         const pchar = rt.normalPointerType(rt.charTypeLiteral);
 
-        console.log(rt);
         const _id = function (
           rt: CRuntime,
           _this: Variable,
@@ -78,6 +78,7 @@ function prepareLambda(lambda: string) {
   return `
   #include "id.h"
   #include "display.h"
+  #include "globals.h"
   int main() {
     DisplayIt it;
     ${lambda.replace(/id\((\w+)\)/g, 'id("$1")')}
@@ -85,9 +86,26 @@ function prepareLambda(lambda: string) {
   }`;
 }
 
-export function run(lambda: string) {
+export function run(lambda: string, globals: ESPHomeConfig["globals"]) {
   initContext();
   const code = prepareLambda(lambda);
+
+  // @ts-expect-error: later
+  config.includes["globals.h"] = {
+    load: function (rt: CRuntime) {
+      const varTypes = {
+        bool: rt.boolTypeLiteral,
+        int: rt.intTypeLiteral,
+      };
+
+      if (globals)
+        globals.forEach((v) => {
+          const type = varTypes[v.type];
+          rt.defVar(v.id, type, rt.val(type, v.initial_value));
+        });
+    },
+  };
+
   const interpreter = JSCPP.run(code, "", config);
   return { doc: context.doc };
 }
