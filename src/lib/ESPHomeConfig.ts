@@ -17,5 +17,7 @@ export interface ESPHomeConfig {
     id: string;
     type: "bool" | "int";
     initial_value: unknown;
+    // for us
+    value?: unknown;
   }[];
 }

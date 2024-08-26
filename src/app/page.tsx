@@ -8,6 +8,7 @@ import { getModel } from "@/lib/models";
 import { run } from "@/lib/jscpp";
 import type { ESPHomeConfig } from "@/lib/ESPHomeConfig";
 import { Render } from "./jrt";
+import { Switch, TextField, Typography } from "@mui/material";
 
 // console.log(JSCPP);
 
@@ -17,15 +18,41 @@ const defaultSrc = `display:
   - platform: ili9xxx
     model: S3BOX
     lambda: |-
-      it.line(50, 50, 150, 150);
+      if (show)
+        it.line(50, 50, x2, 150);
+
 globals:
-  - id: bool1
+  - id: show
     type: bool
-    initial_value: false
-  - id: int1
+    initial_value: true
+  - id: x2
     type: int
-    initial_value: 10
+    initial_value: 150
 `;
+
+function useGlobals(globals: ESPHomeConfig["globals"]) {
+  const [state, setState] = React.useState<Record<string, unknown>>({});
+
+  React.useEffect(() => {
+    if (globals) {
+      const next = globals.reduce(
+        (acc, { id, initial_value }) => {
+          acc[id] = initial_value;
+          return acc;
+        },
+        {} as Record<string, unknown>,
+      );
+      setState(next);
+    }
+  }, [globals]);
+
+  const setGlobal = React.useCallback((id: string, value: any) => {
+    console.log({ id, value });
+    setState((state) => ({ ...state, [id]: value }));
+  }, []);
+
+  return [state, setGlobal] as const;
+}
 
 export default function Index() {
   const [src, setSrc] = React.useState(defaultSrc);
@@ -34,6 +61,8 @@ export default function Index() {
   const [doc, setDoc] = React.useState<ReturnType<typeof run>["doc"]>({
     children: [],
   });
+  const [globals, setGlobal] = useGlobals(parsed.globals);
+  console.log("globals", globals);
 
   React.useEffect(() => {
     try {
@@ -64,7 +93,10 @@ export default function Index() {
 
   React.useEffect(() => {
     try {
-      const { doc } = run(lambda, parsed.globals);
+      const { doc } = run(lambda, {
+        globals: parsed.globals,
+        globalState: globals,
+      });
       setDoc(doc);
       setError(null);
     } catch (error) {
@@ -72,7 +104,7 @@ export default function Index() {
       setError(error as Error);
     }
     // console.log(context);
-  }, [lambda, parsed.globals]);
+  }, [lambda, parsed.globals, globals]);
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
@@ -109,6 +141,38 @@ export default function Index() {
                 </option>
               ))}
             </select>
+          ) : null}
+          {parsed.globals ? (
+            <div>
+              <Typography variant="h6">Globals</Typography>
+              <table cellSpacing={5}>
+                <tbody>
+                  {parsed.globals.map(({ id, type }) => (
+                    <tr key={id}>
+                      <td align="right">
+                        <label htmlFor={id}>{id}</label>
+                      </td>
+                      <td>
+                        {type === "bool" ? (
+                          <Switch
+                            checked={!!globals[id]}
+                            onChange={(e) => setGlobal(id, e.target.checked)}
+                          />
+                        ) : (
+                          <TextField
+                            size="small"
+                            type="number"
+                            sx={{ width: 100 }}
+                            value={globals[id]?.toString()}
+                            onChange={(e) => setGlobal(id, e.target.value)}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       </Split>

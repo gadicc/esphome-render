@@ -86,7 +86,16 @@ function prepareLambda(lambda: string) {
   }`;
 }
 
-export function run(lambda: string, globals: ESPHomeConfig["globals"]) {
+export function run(
+  lambda: string,
+  {
+    globals,
+    globalState,
+  }: {
+    globals: ESPHomeConfig["globals"];
+    globalState: Record<string, unknown>;
+  },
+) {
   initContext();
   const code = prepareLambda(lambda);
 
@@ -101,7 +110,11 @@ export function run(lambda: string, globals: ESPHomeConfig["globals"]) {
       if (globals)
         globals.forEach((v) => {
           const type = varTypes[v.type];
-          rt.defVar(v.id, type, rt.val(type, v.initial_value));
+          rt.defVar(
+            v.id,
+            type,
+            rt.val(type, globalState[v.id] ?? v.initial_value),
+          );
         });
     },
   };
