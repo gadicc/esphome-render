@@ -5,8 +5,9 @@ import { parse } from "yaml";
 // @ts-expect-error: :/
 import JSCPP, { CRuntime, Variable } from "JSCPP";
 import Split from "@uiw/react-split";
-import { Render } from "./jrt";
 import CodeMirror from "@/lib/codemirror";
+import { getModel } from "@/lib/models";
+import { Render } from "./jrt";
 
 // console.log(JSCPP);
 
@@ -24,17 +25,6 @@ interface ESPHomeConfig {
     },
   ];
 }
-
-const models: {
-  [key: string]: { [key: string]: { width: number; height: number } };
-} = {
-  ili9xxx: {
-    S3BOX: {
-      width: 320,
-      height: 240,
-    },
-  },
-};
 
 // import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
 
@@ -157,7 +147,7 @@ export default function Index() {
   const pageIds = pages ? pages.map((page) => page.id) : [];
 
   const [currentPageId, setCurrentPageId] = React.useState(pages?.[0].id ?? "");
-  const model = display && models[display.platform][display.model];
+  const model = display && getModel(display.platform, display.model);
   const { width, height } = model ?? { width: 256, height: 256 };
 
   const page = pages?.find((page) => page.id === currentPageId);
