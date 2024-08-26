@@ -96,18 +96,20 @@ export default function Index() {
             Model: {display?.model ?? "Unknown"} ({width}x{height})
           </div>
           <br />
-          <select
-            name="currentPageId"
-            id="currentPageId"
-            value={currentPageId}
-            onChange={(e) => setCurrentPageId(e.target.value)}
-          >
-            {pageIds.map((pageId) => (
-              <option key={pageId} value={pageId}>
-                {pageId}
-              </option>
-            ))}
-          </select>
+          {pageIds.length ? (
+            <select
+              name="currentPageId"
+              id="currentPageId"
+              value={currentPageId}
+              onChange={(e) => setCurrentPageId(e.target.value)}
+            >
+              {pageIds.map((pageId) => (
+                <option key={pageId} value={pageId}>
+                  {pageId}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </div>
       </Split>
     </div>
