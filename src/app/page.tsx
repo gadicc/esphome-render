@@ -20,6 +20,8 @@ const defaultSrc = `display:
     lambda: |-
       if (show)
         it.line(50, 50, x2, 150);
+      // it.printf(10, 10, id("Arial"), 12, 0x0000, "Hello, world!");
+      it.printf(10, 10, 1, "Hello, %s! x%d", "world", 2);
 
 globals:
   - id: show
@@ -163,7 +165,7 @@ export default function Index() {
                             size="small"
                             type="number"
                             sx={{ width: 100 }}
-                            value={globals[id]?.toString()}
+                            value={globals[id]?.toString() ?? ""}
                             onChange={(e) => setGlobal(id, e.target.value)}
                           />
                         )}

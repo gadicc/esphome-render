@@ -12,8 +12,30 @@ class Line extends Node {
   }
 }
 
+class Printf extends Node {
+  render(key: string | number) {
+    // @ts-expect-error: :/
+    const { x, y, font, size, color, text } = this.block;
+    return (
+      <text
+        key={key}
+        x={x}
+        y={y}
+        // fontFamily={font}
+        // fontSize={size}
+        // fill={color}
+        fontSize={12}
+        fill="black"
+      >
+        {text}
+      </text>
+    );
+  }
+}
+
 export const blocks = {
   line: Line,
+  printf: Printf,
 };
 Node.registerBlocks(blocks);
 

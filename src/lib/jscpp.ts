@@ -1,8 +1,9 @@
 import React from "react";
 
 // @ts-expect-error: :/
-import JSCPP, { CRuntime, Variable } from "JSCPP";
+import JSCPP, { CRuntime, Variable, ArrayVariable } from "JSCPP";
 import { ESPHomeConfig } from "./ESPHomeConfig";
+import printf from "printf";
 
 let context: { doc: { children: unknown[] } };
 function initContext() {
@@ -69,6 +70,61 @@ const config = {
           ],
           rt.intTypeLiteral,
         );
+
+        const pchar = rt.normalPointerType(rt.charTypeLiteral);
+
+        const _printf = function (
+          rt: CRuntime,
+          _this: Variable,
+          x: Variable,
+          y: Variable,
+          font: Variable,
+          format: Variable,
+          ...params: Variable[]
+        ) {
+          // this would be better, but i couldn't figure out how to make correct target
+          // const sprintf = rt.getFunc("global", "sprintf", [pchar, pchar, "?"]);
+          // const target = rt.makeCharArrayFromString("                    ")
+          // sprintf(rt, null, target, format, ...params);
+
+          const _format = rt.getStringFromCharArray(format);
+          const text = printf(
+            _format,
+            ...params.map((v) => {
+              if (v.t.type === "primitive") return v.v;
+              if (
+                v.t.type === "pointer" &&
+                v.t.ptrType === "array" &&
+                v.t.eleType.name === "char"
+              )
+                return rt.getStringFromCharArray(v);
+              console.warn("Returning unknown type, may or may not work", v);
+              return v.v;
+            }),
+          );
+
+          context.doc.children.push({
+            type: "printf",
+            x: x.v,
+            y: y.v,
+            font: font.v,
+            text,
+          });
+        };
+
+        rt.regFunc(
+          _printf,
+          DisplayIt,
+          "printf",
+          [
+            rt.intTypeLiteral, // x
+            rt.intTypeLiteral, // y
+            rt.intTypeLiteral, // font TODO
+            pchar, // format
+            "?",
+          ],
+          rt.intTypeLiteral,
+        );
       },
     },
   },
@@ -79,6 +135,9 @@ function prepareLambda(lambda: string) {
   #include "id.h"
   #include "display.h"
   #include "globals.h"
+  #include <cstdio>
+  using namespace std;
+
   int main() {
     DisplayIt it;
     ${lambda.replace(/id\((\w+)\)/g, 'id("$1")')}
