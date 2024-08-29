@@ -218,6 +218,7 @@ export function run(
       const varTypes = {
         bool: rt.boolTypeLiteral,
         int: rt.intTypeLiteral,
+        "std::string": rt.normalPointerType(rt.charTypeLiteral),
       };
 
       if (globals)
@@ -226,7 +227,9 @@ export function run(
           rt.defVar(
             v.id,
             type,
-            rt.val(type, globalState[v.id] ?? v.initial_value),
+            v.type === "std::string"
+              ? rt.makeCharArrayFromString(globalState[v.id] ?? v.initial_value)
+              : rt.val(type, globalState[v.id] ?? v.initial_value),
           );
         });
     },

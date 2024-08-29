@@ -15,7 +15,7 @@ export interface ESPHomeConfig {
 
   globals: {
     id: string;
-    type: "bool" | "int";
+    type: "bool" | "int" | "std::string";
     initial_value: unknown;
     // for us
     value?: unknown;

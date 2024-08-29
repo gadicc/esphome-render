@@ -19,13 +19,17 @@ const defaultSrc = `display:
   - platform: ili9xxx
     model: S3BOX
     lambda: |-
+      // it.printf(10, 10, id("Arial"), 12, 0x0000, "Hello, world!");
+      it.printf(10, 20, id(my_font), "Hello, %s!", name);
       if (show)
         it.line(50, 50, x2, 150);
-      // it.printf(10, 10, id("Arial"), 12, 0x0000, "Hello, world!");
-      it.printf(10, 10, id(my_font), "Hello, %s! x%d", "world", 2);
-      it.printf(150, 150, id(icon_font_55), "\\U000F06E8");
+      it.printf(150, 120, id(icon_font_55), "\\U000F06E8");
+      it.printf(x2 + 3, 160, id(my_font), "x2: %d", x2);
 
 globals:
+  - id: name
+    type: std::string
+    initial_value: "world"
   - id: show
     type: bool
     initial_value: true
@@ -217,12 +221,20 @@ export default function Index() {
                             checked={!!globals[id]}
                             onChange={(e) => setGlobal(id, e.target.checked)}
                           />
-                        ) : (
+                        ) : type === "int" ? (
                           <TextField
                             size="small"
                             type="number"
                             sx={{ width: 100 }}
                             value={globals[id]?.toString() ?? ""}
+                            onChange={(e) =>
+                              setGlobal(id, parseInt(e.target.value))
+                            }
+                          />
+                        ) : (
+                          <TextField
+                            size="small"
+                            value={globals[id] ?? ""}
                             onChange={(e) => setGlobal(id, e.target.value)}
                           />
                         )}
