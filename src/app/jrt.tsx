@@ -15,16 +15,15 @@ class Line extends Node {
 class Printf extends Node {
   render(key: string | number) {
     // @ts-expect-error: :/
-    const { x, y, font, size, color, text } = this.block;
+    const { x, y, fontFamily, fontSize, color, text } = this.block;
     return (
       <text
         key={key}
         x={x}
         y={y}
-        // fontFamily={font}
-        // fontSize={size}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
         // fill={color}
-        fontSize={12}
         fill="black"
       >
         {text}

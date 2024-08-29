@@ -7,6 +7,7 @@ import CodeMirror from "@/lib/codemirror";
 import { getModel } from "@/lib/models";
 import { run } from "@/lib/jscpp";
 import type { ESPHomeConfig } from "@/lib/ESPHomeConfig";
+import type { Id } from "@/lib/jscpp";
 import { Render } from "./jrt";
 import { Switch, TextField, Typography } from "@mui/material";
 
@@ -21,7 +22,8 @@ const defaultSrc = `display:
       if (show)
         it.line(50, 50, x2, 150);
       // it.printf(10, 10, id("Arial"), 12, 0x0000, "Hello, world!");
-      it.printf(10, 10, 1, "Hello, %s! x%d", "world", 2);
+      it.printf(10, 10, id(my_font), "Hello, %s! x%d", "world", 2);
+      it.printf(150, 150, id(icon_font_55), "\\U000F06E8");
 
 globals:
   - id: show
@@ -30,6 +32,16 @@ globals:
   - id: x2
     type: int
     initial_value: 150
+
+font:
+  - file: "https://github.com/BigBobbas/ESP32-S3-Box3-Custom-ESPHome/raw/main/fonts/consola.ttf"
+    id: my_font
+    size: 14
+    glyphs:
+      '&@!"''%()+=,-_.:°/$€£¥?0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyzÀàÁáÂâÃãÄäĀāĂăÅåǺǻẠạĄąÆæǼǽĆćĈĉČčĊċÇçĎďĐđÐðÈèÉéÊêẼẽĚěËëĒēĔĕĖėẸẹĘęĜĝǦǧĞğĠġĢģĤĥĦħıÌìÍíÎîĨĩÏïĪīĬĭİỊịĮįȷĴĵĶķĸĹĺĽľĻļŁłĿŀŃńÑñŇňŅņƝɲŊŋŉÒòÓóÔôÕõÖöŌōŎŏŐőỌọǪǫØøǾǿŒœŔŕŘřŖŗŚśŜŝŠšŞşȘșẞßŤťŢţȚțŦŧÞþÙùÚúÛûŨũÜüŪūŬŭŮůŰűỤụŲųẀẁẂẃŴŵẄẅỲỳÝýŶŷỸỹŸÿȲȳŹźŽžŻżĲĳƏə'
+  - file: "https://github.com/BigBobbas/ESP32-S3-Box3-Custom-ESPHome/raw/main/fonts/materialdesignicons-webfont.ttf"
+    id: icon_font_55
+    size: 45
 `;
 
 function useGlobals(globals: ESPHomeConfig["globals"]) {
@@ -56,6 +68,21 @@ function useGlobals(globals: ESPHomeConfig["globals"]) {
   return [state, setGlobal] as const;
 }
 
+// TODO, rather do this in useEffect and only return a new object on change.
+function collectIds(config: ESPHomeConfig) {
+  const ids = {} as Record<string, Id>;
+  for (const type of ["globals", "font"] as Id["type"][]) {
+    if (Array.isArray(config[type])) {
+      const entries = config[type];
+      entries.forEach((entry) => {
+        // @ts-expect-error: later
+        ids[entry.id] = { type, entry };
+      });
+    }
+  }
+  return ids;
+}
+
 export default function Index() {
   const [src, setSrc] = React.useState(defaultSrc);
   const [parsed, setParsed] = React.useState({} as ESPHomeConfig);
@@ -63,8 +90,36 @@ export default function Index() {
   const [doc, setDoc] = React.useState<ReturnType<typeof run>["doc"]>({
     children: [],
   });
+  const ids = React.useMemo(() => collectIds(parsed), [parsed]);
   const [globals, setGlobal] = useGlobals(parsed.globals);
-  console.log("globals", globals);
+  // console.log("globals", globals);
+  // console.log("ids", ids);
+
+  const fontStyle = React.useMemo(() => {
+    const byFamily = {} as Record<string, ESPHomeConfig["font"][0]>;
+    parsed.font?.forEach((font) => {
+      // TODO, rather use hash of url
+      // @ts-expect-error: later
+      const fontFamily = font.file.split("/").pop().split(".ttf")[0];
+      if (!font._fontFamily) font._fontFamily = fontFamily;
+      if (!byFamily[fontFamily]) byFamily[fontFamily] = font;
+    });
+
+    // TODO, unique
+    return (
+      <style type="text/css">
+        {Object.values(byFamily).map(
+          (font) =>
+            `@font-face {
+              font-family: '${font._fontFamily}';
+              src: url("${font.file.replace(/^https:\/\/github.com\/(.*)\/(.*)\/raw\/main\/(.*)/, "https://cdn.jsdelivr.net/gh/$1/$2/$3")}") format("truetype");
+              crossorigin: 'anonymous';
+            }`,
+        )}
+      </style>
+    );
+  }, [parsed.font]);
+  // console.log("fonts", fontStyle);
 
   React.useEffect(() => {
     try {
@@ -98,6 +153,7 @@ export default function Index() {
       const { doc } = run(lambda, {
         globals: parsed.globals,
         globalState: globals,
+        ids,
       });
       setDoc(doc);
       setError(null);
@@ -106,7 +162,7 @@ export default function Index() {
       setError(error as Error);
     }
     // console.log(context);
-  }, [lambda, parsed.globals, globals]);
+  }, [lambda, parsed.globals, globals, ids]);
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
@@ -124,6 +180,7 @@ export default function Index() {
             style={{ border: "1px solid black", width: 300 }}
             viewBox={`0 0 ${width} ${height}`}
           >
+            <defs>{fontStyle}</defs>
             <Render doc={doc} />
           </svg>
           <div>

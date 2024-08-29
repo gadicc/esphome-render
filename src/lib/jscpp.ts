@@ -1,15 +1,34 @@
 import React from "react";
 
 // @ts-expect-error: :/
-import JSCPP, { CRuntime, Variable, ArrayVariable } from "JSCPP";
+import JSCPP, { CRuntime, Variable, ObjectVariable } from "JSCPP";
 import { ESPHomeConfig } from "./ESPHomeConfig";
 import printf from "printf";
 
-let context: { doc: { children: unknown[] } };
-function initContext() {
+export type Id =
+  | { type: "font"; entry: ESPHomeConfig["font"][0] }
+  | { type: "globals"; entry: ESPHomeConfig["globals"][0] };
+
+let context: {
+  doc: { children: unknown[] };
+  ids: Record<string, Id>;
+};
+function initContext(ids: Record<string, Id>) {
   context = {
+    ids,
     doc: { children: [] },
   };
+}
+
+// TODO (maybe): Could also resolve an id if an id otherwise return orig?
+function _resolveId(rt: CRuntime, v: ObjectVariable) {
+  if (!(v.t.type === "class" && v.t.name === "Id"))
+    throw new Error("not an id: " + JSON.stringify(v));
+  const idVar = rt.getMember(v, "id");
+  const id = rt.getStringFromCharArray(idVar);
+  const resolved = context.ids[id];
+  if (resolved === undefined) throw new Error("id not found in context: " + id);
+  return resolved;
 }
 
 const config = {
@@ -17,6 +36,15 @@ const config = {
     "id.h": {
       load: function (rt: CRuntime) {
         const pchar = rt.normalPointerType(rt.charTypeLiteral);
+
+        const type = rt.newClass("Id", [
+          {
+            name: "id",
+            type: pchar,
+          },
+        ]);
+        const typeSig = rt.getTypeSignature(type);
+        rt.types[typeSig].father = "object";
 
         const _id = function (
           rt: CRuntime,
@@ -29,15 +57,20 @@ const config = {
             .map((v) => String.fromCharCode(v.v))
             .join("");
 
-          console.log('id("' + name + '")');
-          return rt.val(rt.intTypeLiteral, 0);
+          // console.log('id("' + name + '")');
+          return {
+            t: { type: "class", name: "Id" },
+            v: { members: { id: rt.makeCharArrayFromString(name) } },
+          };
         };
 
-        rt.regFunc(_id, "global", "id", [pchar], rt.intTypeLiteral);
+        // rt.regFunc(_id, "global", "id", [pchar], pchar);
+        rt.regFunc(_id, "global", "id", [pchar], type);
       },
     },
     "display.h": {
       load: function (rt: CRuntime) {
+        const resolveId = _resolveId.bind(null, rt);
         // console.log("load", rt);
         const DisplayIt = rt.newClass("DisplayIt", []);
 
@@ -87,7 +120,11 @@ const config = {
           // const target = rt.makeCharArrayFromString("                    ")
           // sprintf(rt, null, target, format, ...params);
 
+          const _font = resolveId(font);
+
           const _format = rt.getStringFromCharArray(format);
+          // console.log("format", _format, format);
+
           const text = printf(
             _format,
             ...params.map((v) => {
@@ -107,7 +144,11 @@ const config = {
             type: "printf",
             x: x.v,
             y: y.v,
-            font: font.v,
+            // @ts-expect-error: TODO
+            fontFamily: _font.entry._fontFamily,
+            // Default: 20 (https://esphome.io/components/font#display-fonts)
+            // @ts-expect-error: TODO
+            fontSize: _font.entry.size || 20,
             text,
           });
         };
@@ -119,7 +160,8 @@ const config = {
           [
             rt.intTypeLiteral, // x
             rt.intTypeLiteral, // y
-            rt.intTypeLiteral, // font TODO
+            // pchar, // font
+            { type: "class", name: "Id" },
             pchar, // format
             "?",
           ],
@@ -129,6 +171,11 @@ const config = {
     },
   },
 };
+
+// https://github.com/esphome/esphome/blob/caaae59ea9db397bc80e6e51504bd698ece059f3/esphome/core/__init__.py#L273
+const LAMBDA_PROG = /id\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\)(\.?)/g;
+// https://github.com/esphome/esphome/blob/caaae59ea9db397bc80e6e51504bd698ece059f3/esphome/config_validation.py#L1437
+const LAMBDA_ENTITY_ID_PROG = /\Wid\(\s*([a-zA-Z0-9_]+\.[.a-zA-Z0-9_]+)\s*\)/g;
 
 function prepareLambda(lambda: string) {
   return `
@@ -140,7 +187,12 @@ function prepareLambda(lambda: string) {
 
   int main() {
     DisplayIt it;
-    ${lambda.replace(/id\((\w+)\)/g, 'id("$1")')}
+    ${lambda
+      .replace(LAMBDA_PROG, 'id("$1")')
+      // JSCPP doesn't seem to support / decode large unicode ranges
+      .replace(/\\U([0-9A-Fa-f]{8,8})/g, (_, hexStr) => {
+        return String.fromCodePoint(Number("0x" + hexStr));
+      })}
     return 0;
   }`;
 }
@@ -150,12 +202,14 @@ export function run(
   {
     globals,
     globalState,
+    ids,
   }: {
     globals: ESPHomeConfig["globals"];
     globalState: Record<string, unknown>;
+    ids: Record<string, Id>;
   },
 ) {
-  initContext();
+  initContext(ids);
   const code = prepareLambda(lambda);
 
   // @ts-expect-error: later
