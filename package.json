@@ -15,6 +15,7 @@
     "@lezer/common": "^1.2.1",
     "@lezer/cpp": "^1.1.2",
     "@lezer/yaml": "^1.0.3",
+    "@mui/icons-material": "^6.0.1",
     "@mui/material": "^5.16.7",
     "@mui/material-nextjs": "^5.16.6",
     "@uiw/react-codemirror": "^4.23.0",

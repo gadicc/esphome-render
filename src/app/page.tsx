@@ -9,7 +9,8 @@ import { run } from "@/lib/jscpp";
 import type { ESPHomeConfig } from "@/lib/ESPHomeConfig";
 import type { Id } from "@/lib/jscpp";
 import { Render } from "./jrt";
-import { Switch, TextField, Typography } from "@mui/material";
+import { IconButton, Switch, TextField, Typography } from "@mui/material";
+import { Close } from "@mui/icons-material";
 
 // console.log(JSCPP);
 
@@ -182,15 +183,10 @@ export default function Index() {
   }, [lambda, parsed.globals, globals, ids, width, height]);
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <Split>
         <div style={{ width: "50%" }}>
           <CodeMirror value={src} onChange={setSrc} />
-          {error && (
-            <div style={{ padding: 5 }}>
-              {error.name}: {error.message}
-            </div>
-          )}
         </div>
         <div style={{ padding: 15 }}>
           <svg
@@ -260,6 +256,30 @@ export default function Index() {
           ) : null}
         </div>
       </Split>
+      {error && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            border: "1px solid #aaa",
+            borderRadius: 5,
+            margin: 15,
+            padding: 15,
+            background: "rgba(255, 240, 240, 0.95)",
+            zIndex: 100,
+            fontFamily: "monospace",
+          }}
+        >
+          <IconButton
+            style={{ position: "absolute", top: 0, right: 0 }}
+            onClick={() => setError(null)}
+          >
+            <Close />
+          </IconButton>
+          {error.name}: {error.message}
+        </div>
+      )}
     </div>
   );
 }
