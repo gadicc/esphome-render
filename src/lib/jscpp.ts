@@ -7,16 +7,19 @@ import printf from "printf";
 
 export type Id =
   | { type: "font"; entry: ESPHomeConfig["font"][0] }
-  | { type: "globals"; entry: ESPHomeConfig["globals"][0] };
+  | { type: "globals"; entry: ESPHomeConfig["globals"][0] }
+  | { type: "color"; entry: ESPHomeConfig["color"][0] };
 
 let context: {
   doc: { children: unknown[] };
   ids: Record<string, Id>;
+  extra: Record<string, unknown>;
 };
-function initContext(ids: Record<string, Id>) {
+function initContext(ids: Record<string, Id>, extra: Record<string, unknown>) {
   context = {
     ids,
     doc: { children: [] },
+    extra,
   };
 }
 
@@ -29,6 +32,16 @@ function _resolveId(rt: CRuntime, v: ObjectVariable) {
   const resolved = context.ids[id];
   if (resolved === undefined) throw new Error("id not found in context: " + id);
   return resolved;
+}
+
+function _resolveColor(rt: CRuntime, v: ObjectVariable) {
+  if (!v) return null;
+  const resolved = _resolveId(rt, v);
+  if (resolved.type !== "color")
+    throw new Error("not a color: " + JSON.stringify(v));
+  const color = resolved.entry;
+  if (color.hex !== undefined) return "#" + color.hex;
+  throw new Error("Unimplemented color resolver for: " + JSON.stringify(color));
 }
 
 const config = {
@@ -60,7 +73,12 @@ const config = {
           // console.log('id("' + name + '")');
           return {
             t: { type: "class", name: "Id" },
-            v: { members: { id: rt.makeCharArrayFromString(name) } },
+            v: {
+              members: {
+                id: rt.makeCharArrayFromString(name),
+                entry: context.ids[name],
+              },
+            },
           };
         };
 
@@ -71,6 +89,7 @@ const config = {
     "display.h": {
       load: function (rt: CRuntime) {
         const resolveId = _resolveId.bind(null, rt);
+        const resolveColor = _resolveColor.bind(null, rt);
         // console.log("load", rt);
         const DisplayIt = rt.newClass("DisplayIt", []);
 
@@ -112,6 +131,7 @@ const config = {
           x: Variable,
           y: Variable,
           font: Variable,
+          color: Variable,
           format: Variable,
           ...params: Variable[]
         ) {
@@ -121,6 +141,7 @@ const config = {
           // sprintf(rt, null, target, format, ...params);
 
           const _font = resolveId(font);
+          const _color = resolveColor(color);
 
           const _format = rt.getStringFromCharArray(format);
           // console.log("format", _format, format);
@@ -150,6 +171,7 @@ const config = {
             // @ts-expect-error: TODO
             fontSize: _font.entry.size || 20,
             text,
+            color: _color,
           });
         };
 
@@ -160,10 +182,57 @@ const config = {
           [
             rt.intTypeLiteral, // x
             rt.intTypeLiteral, // y
-            // pchar, // font
-            { type: "class", name: "Id" },
+            { type: "class", name: "Id" }, // font
+            { type: "class", name: "Id" }, // color
             pchar, // format
             "?",
+          ],
+          rt.intTypeLiteral,
+        );
+
+        function _printfFormatOnly(
+          rt: CRuntime,
+          _this: Variable,
+          x: Variable,
+          y: Variable,
+          font: Variable,
+          format: Variable,
+          ...params: Variable[]
+        ) {
+          _printf(rt, _this, x, y, font, null, format, ...params);
+        }
+
+        rt.regFunc(
+          _printfFormatOnly,
+          DisplayIt,
+          "printf",
+          [
+            rt.intTypeLiteral, // x
+            rt.intTypeLiteral, // y
+            { type: "class", name: "Id" }, // font
+            pchar, // format
+            "?",
+          ],
+          rt.intTypeLiteral,
+        );
+
+        function _fill(rt: CRuntime, _this: Variable, color: Variable) {
+          context.doc.children.push({
+            type: "rect",
+            x: 0,
+            y: 0,
+            width: context.extra.width,
+            height: context.extra.height,
+            fill: resolveColor(color),
+          });
+        }
+
+        rt.regFunc(
+          _fill,
+          DisplayIt,
+          "fill",
+          [
+            { type: "class", name: "Id" }, // color
           ],
           rt.intTypeLiteral,
         );
@@ -203,13 +272,17 @@ export function run(
     globals,
     globalState,
     ids,
+    width,
+    height,
   }: {
     globals: ESPHomeConfig["globals"];
     globalState: Record<string, unknown>;
     ids: Record<string, Id>;
+    width: number;
+    height: number;
   },
 ) {
-  initContext(ids);
+  initContext(ids, { width, height });
   const code = prepareLambda(lambda);
 
   // @ts-expect-error: later

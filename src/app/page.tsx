@@ -19,12 +19,12 @@ const defaultSrc = `display:
   - platform: ili9xxx
     model: S3BOX
     lambda: |-
-      // it.printf(10, 10, id("Arial"), 12, 0x0000, "Hello, world!");
-      it.printf(10, 20, id(my_font), "Hello, %s!", name);
+      it.fill(id(black));
+      it.printf(10, 20, id(my_font), id(white), "Hello, %s!", name);
       if (show)
         it.line(50, 50, x2, 150);
-      it.printf(150, 120, id(icon_font_55), "\\U000F06E8");
-      it.printf(x2 + 3, 160, id(my_font), "x2: %d", x2);
+      it.printf(150, 120, id(icon_font_55), id(yellow), "\\U000F06E8");
+      it.printf(x2 + 3, 160, id(my_font), id(white), "x2: %d", x2);
 
 globals:
   - id: name
@@ -46,6 +46,16 @@ font:
   - file: "https://github.com/BigBobbas/ESP32-S3-Box3-Custom-ESPHome/raw/main/fonts/materialdesignicons-webfont.ttf"
     id: icon_font_55
     size: 45
+
+color:
+  - id: red
+    hex: FF0000
+  - id: black
+    hex: 000000
+  - id: white
+    hex: FFFFFF
+  - id: yellow
+    hex: FFFF00
 `;
 
 function useGlobals(globals: ESPHomeConfig["globals"]) {
@@ -75,7 +85,7 @@ function useGlobals(globals: ESPHomeConfig["globals"]) {
 // TODO, rather do this in useEffect and only return a new object on change.
 function collectIds(config: ESPHomeConfig) {
   const ids = {} as Record<string, Id>;
-  for (const type of ["globals", "font"] as Id["type"][]) {
+  for (const type of ["globals", "font", "color"] as Id["type"][]) {
     if (Array.isArray(config[type])) {
       const entries = config[type];
       entries.forEach((entry) => {
@@ -84,6 +94,7 @@ function collectIds(config: ESPHomeConfig) {
       });
     }
   }
+  // console.log(ids);
   return ids;
 }
 
@@ -158,6 +169,8 @@ export default function Index() {
         globals: parsed.globals,
         globalState: globals,
         ids,
+        width,
+        height,
       });
       setDoc(doc);
       setError(null);
@@ -166,7 +179,7 @@ export default function Index() {
       setError(error as Error);
     }
     // console.log(context);
-  }, [lambda, parsed.globals, globals, ids]);
+  }, [lambda, parsed.globals, globals, ids, width, height]);
 
   return (
     <div style={{ width: "100%", height: "100%" }}>

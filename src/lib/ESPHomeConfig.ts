@@ -36,4 +36,20 @@ export interface ESPHomeConfig {
     // extras;
     _fontFamily?: string; // internal
   }[];
+
+  // https://esphome.io/components/display/#color
+  // https://esphome.io/api/structesphome_1_1_color
+  // https://esphome.io/api/color_8h_source
+  color: {
+    id: string;
+    red?: string;
+    red_int?: number;
+    green?: string;
+    green_int?: number;
+    blue?: string;
+    blue_int?: number;
+    white?: string;
+    white_int?: number;
+    hex?: string;
+  }[];
 }

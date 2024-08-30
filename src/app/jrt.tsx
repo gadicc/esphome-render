@@ -12,6 +12,16 @@ class Line extends Node {
   }
 }
 
+class Rect extends Node {
+  render(key: string | number) {
+    // @ts-expect-error: :/
+    const { x, y, width, height, fill } = this.block;
+    return (
+      <rect key={key} x={x} y={y} width={width} height={height} fill={fill} />
+    );
+  }
+}
+
 class Printf extends Node {
   render(key: string | number) {
     // @ts-expect-error: :/
@@ -23,8 +33,7 @@ class Printf extends Node {
         y={y}
         fontFamily={fontFamily}
         fontSize={fontSize}
-        // fill={color}
-        fill="black"
+        fill={color}
       >
         {text}
       </text>
@@ -35,6 +44,7 @@ class Printf extends Node {
 export const blocks = {
   line: Line,
   printf: Printf,
+  rect: Rect,
 };
 Node.registerBlocks(blocks);
 
