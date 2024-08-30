@@ -1,0 +1,15 @@
+diff --git a/node_modules/JSCPP/lib/rt.js b/node_modules/JSCPP/lib/rt.js
+index a4f8f6b..d4c1c72 100644
+--- a/node_modules/JSCPP/lib/rt.js
++++ b/node_modules/JSCPP/lib/rt.js
+@@ -669,7 +669,9 @@ class CRuntime {
+             return !this.isFunctionType(type2);
+         }
+         else if (this.isClassType(type1) || this.isClassType(type2)) {
+-            this.raiseException("not implemented");
++            console.log("Patch: skipping exception for unimplemented castable check for class types");
++            // this.raiseException("not implemented");
++            return false;
+         }
+         return false;
+     }
