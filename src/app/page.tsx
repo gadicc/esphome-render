@@ -20,6 +20,7 @@ const defaultSrc = `display:
   - platform: ili9xxx
     model: S3BOX
     lambda: |-
+      auto blue = Color(0, 0, 255);
       it.fill(id(black));
       it.printf(10, 20, id(my_font), id(white), "Hello, %s!", name);
       if (show)
@@ -169,6 +170,7 @@ export default function Index() {
       const { doc } = run(lambda, {
         globals: parsed.globals,
         globalState: globals,
+        color: parsed.color,
         ids,
         width,
         height,

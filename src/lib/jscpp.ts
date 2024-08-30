@@ -36,6 +36,17 @@ function _resolveId(rt: CRuntime, v: ObjectVariable) {
 
 function _resolveColor(rt: CRuntime, v: ObjectVariable) {
   if (!v) return null;
+
+  if (v.t.type === "class" && v.t.name === "Color") {
+    const red = rt.getMember(v, "red").v;
+    const green = rt.getMember(v, "green").v;
+    const blue = rt.getMember(v, "blue").v;
+    return (
+      "#" +
+      [red, green, blue].map((v) => v.toString(16).padStart(2, "0")).join("")
+    );
+  }
+
   const resolved = _resolveId(rt, v);
   if (resolved.type !== "color")
     throw new Error("not a color: " + JSON.stringify(v));
@@ -84,6 +95,60 @@ const config = {
 
         // rt.regFunc(_id, "global", "id", [pchar], pchar);
         rt.regFunc(_id, "global", "id", [pchar], type);
+      },
+    },
+    // https://esphome.io/api/color_8h_source
+    // https://esphome.io/api/structesphome_1_1_color
+    "color.h": {
+      load(rt: CRuntime) {
+        // NB: esphome color.h uses a union for very convenient aliases but
+        // we can't represent that in JavaScript.  So, we should consider
+        // a Proxy over color object to also handle: r,g,b, raw[4], raw_32.
+        const Color = rt.newClass("Color", [
+          {
+            name: "red",
+            type: rt.intTypeLiteral,
+          },
+          {
+            name: "green",
+            type: rt.intTypeLiteral,
+          },
+          {
+            name: "blue",
+            type: rt.intTypeLiteral,
+          },
+          {
+            name: "white",
+            type: rt.intTypeLiteral,
+          },
+        ]);
+        const typeSig = rt.getTypeSignature(Color);
+        rt.types[typeSig].father = "object";
+
+        rt.registerTypedef(Color, "color");
+
+        const _color = function (
+          rt: CRuntime,
+          _this: Variable,
+          red: Variable,
+          green: Variable,
+          blue: Variable,
+        ) {
+          return {
+            t: { type: "class", name: "Color" },
+            v: {
+              members: { red, green, blue },
+            },
+          };
+        };
+
+        rt.regFunc(
+          _color,
+          "global",
+          "Color",
+          [rt.intTypeLiteral, rt.intTypeLiteral, rt.intTypeLiteral],
+          Color,
+        );
       },
     },
     "display.h": {
@@ -189,6 +254,20 @@ const config = {
           ],
           rt.intTypeLiteral,
         );
+        rt.regFunc(
+          _printf,
+          DisplayIt,
+          "printf",
+          [
+            rt.intTypeLiteral, // x
+            rt.intTypeLiteral, // y
+            { type: "class", name: "Id" }, // font
+            { type: "class", name: "Color" }, // color
+            pchar, // format
+            "?",
+          ],
+          rt.intTypeLiteral,
+        );
 
         function _printfFormatOnly(
           rt: CRuntime,
@@ -236,6 +315,13 @@ const config = {
           ],
           rt.intTypeLiteral,
         );
+        rt.regFunc(
+          _fill,
+          DisplayIt,
+          "fill",
+          [{ type: "class", name: "Color" }],
+          rt.intTypeLiteral,
+        );
       },
     },
   },
@@ -246,22 +332,44 @@ const LAMBDA_PROG = /id\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\)(\.?)/g;
 // https://github.com/esphome/esphome/blob/caaae59ea9db397bc80e6e51504bd698ece059f3/esphome/config_validation.py#L1437
 const LAMBDA_ENTITY_ID_PROG = /\Wid\(\s*([a-zA-Z0-9_]+\.[.a-zA-Z0-9_]+)\s*\)/g;
 
-function prepareLambda(lambda: string) {
+function prepareLambda(lambda: string, color: ESPHomeConfig["color"] = []) {
+  const colors = color.map((c) => {
+    if (c.hex !== undefined) {
+      const hex = c.hex.toString().padStart(6, "0");
+      return {
+        id: c.id,
+        red: Number("0x" + hex.substring(0, 2)),
+        green: Number("0x" + hex.substring(2, 4)),
+        blue: Number("0x" + hex.substring(4, 6)),
+      };
+    }
+    throw new Error(
+      "prepareLambda: Unimplemented color resolver for: " + JSON.stringify(c),
+    );
+  });
+
   return `
   #include "id.h"
   #include "display.h"
   #include "globals.h"
+  #include "color.h"
   #include <cstdio>
   using namespace std;
 
   int main() {
     DisplayIt it;
+    color COLOR_BLACK = Color(0, 0, 0);
+    color COLOR_WHITE = Color(255, 255, 255);
+    ${colors.map((c) => `color ${c.id} = Color(${c.red}, ${c.green}, ${c.blue});`).join("\n")}
     ${lambda
       .replace(LAMBDA_PROG, 'id("$1")')
       // JSCPP doesn't seem to support / decode large unicode ranges
       .replace(/\\U([0-9A-Fa-f]{8,8})/g, (_, hexStr) => {
         return String.fromCodePoint(Number("0x" + hexStr));
-      })}
+      })
+      .replace(/auto\s+(\w+\s*=\s*Color\s*\()/g, "color $1")
+      .replace(/Color::BlACK/g, "COLOR_BLACK")
+      .replace(/Color::WHITE/g, "COLOR_WHITE")}
     return 0;
   }`;
 }
@@ -271,19 +379,22 @@ export function run(
   {
     globals,
     globalState,
+    color,
     ids,
     width,
     height,
   }: {
     globals: ESPHomeConfig["globals"];
     globalState: Record<string, unknown>;
+    color: ESPHomeConfig["color"];
     ids: Record<string, Id>;
     width: number;
     height: number;
   },
 ) {
   initContext(ids, { width, height });
-  const code = prepareLambda(lambda);
+  const code = prepareLambda(lambda, color);
+  // console.log("code", code);
 
   // @ts-expect-error: later
   config.includes["globals.h"] = {
