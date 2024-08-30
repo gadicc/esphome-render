@@ -268,9 +268,11 @@ export default function Index() {
             borderRadius: 5,
             margin: 15,
             padding: 15,
+            paddingRight: 30,
             background: "rgba(255, 240, 240, 0.95)",
             zIndex: 100,
             fontFamily: "monospace",
+            whiteSpace: "pre-wrap",
           }}
         >
           <IconButton
