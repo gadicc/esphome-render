@@ -1,9 +1,12 @@
 // @ts-expect-error: :/
 import { CRuntime, Variable } from "JSCPP";
 
+export function componentsToHex(r: number, g: number, b: number) {
+  return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+}
+
 // https://esphome.io/api/color_8h_source
 // https://esphome.io/api/structesphome_1_1_color
-
 export default {
   load(rt: CRuntime) {
     // NB: esphome color.h uses a union for very convenient aliases but
