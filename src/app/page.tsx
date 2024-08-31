@@ -156,6 +156,10 @@ export default function Index() {
   const [currentPageId, setCurrentPageId] = React.useState(pages?.[0].id ?? "");
   const model = display && getModel(display.platform, display.model);
   const { width, height } = model ?? { width: 256, height: 256 };
+  const { COLOR_ON, COLOR_OFF } = model ?? {
+    COLOR_ON: [255, 255, 255],
+    COLOR_OFF: [0, 0, 0],
+  };
 
   const page = pages?.find((page) => page.id === currentPageId);
   const lambda = (page ? page.lambda : display?.lambda) ?? "";
@@ -174,6 +178,8 @@ export default function Index() {
         ids,
         width,
         height,
+        COLOR_ON,
+        COLOR_OFF,
       });
       setDoc(doc);
       setError(null);

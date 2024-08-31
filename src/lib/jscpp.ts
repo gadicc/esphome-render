@@ -10,12 +10,20 @@ export type Id =
   | { type: "globals"; entry: ESPHomeConfig["globals"][0] }
   | { type: "color"; entry: ESPHomeConfig["color"][0] };
 
+// TODO, better name
+interface Extra {
+  width: number;
+  height: number;
+  COLOR_ON: [number, number, number];
+  COLOR_OFF: [number, number, number];
+}
+
 let context: {
   doc: { children: unknown[] };
   ids: Record<string, Id>;
-  extra: Record<string, unknown>;
+  extra: Extra;
 };
-function initContext(ids: Record<string, Id>, extra: Record<string, unknown>) {
+function initContext(ids: Record<string, Id>, extra: Extra) {
   context = {
     ids,
     doc: { children: [] },
@@ -360,6 +368,8 @@ function prepareLambda(lambda: string, color: ESPHomeConfig["color"] = []) {
     DisplayIt it;
     color COLOR_BLACK = Color(0, 0, 0);
     color COLOR_WHITE = Color(255, 255, 255);
+    color COLOR_ON = Color(${context.extra.COLOR_ON.join(", ")});
+    color COLOR_OFF = Color(${context.extra.COLOR_OFF.join(", ")});
     ${colors.map((c) => `color ${c.id} = Color(${c.red}, ${c.green}, ${c.blue});`).join("\n")}
     ${lambda
       .replace(LAMBDA_PROG, 'id("$1")')
@@ -383,6 +393,8 @@ export function run(
     ids,
     width,
     height,
+    COLOR_ON,
+    COLOR_OFF,
   }: {
     globals: ESPHomeConfig["globals"];
     globalState: Record<string, unknown>;
@@ -390,11 +402,13 @@ export function run(
     ids: Record<string, Id>;
     width: number;
     height: number;
+    COLOR_ON: [number, number, number];
+    COLOR_OFF: [number, number, number];
   },
 ) {
-  initContext(ids, { width, height });
+  initContext(ids, { width, height, COLOR_ON, COLOR_OFF });
   const code = prepareLambda(lambda, color);
-  // console.log("code", code);
+  console.log("code", code);
 
   // @ts-expect-error: later
   config.includes["globals.h"] = {
