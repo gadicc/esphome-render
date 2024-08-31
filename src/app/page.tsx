@@ -7,7 +7,7 @@ import CodeMirror from "@/lib/codemirror";
 import { getModel } from "@/lib/models";
 import { run } from "@/lib/jscpp";
 import type { ESPHomeConfig } from "@/lib/ESPHomeConfig";
-import type { Id } from "@/lib/jscpp";
+import type { Id } from "@/lib/util";
 import { Render } from "./jrt";
 import { IconButton, Switch, TextField, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
