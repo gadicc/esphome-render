@@ -139,8 +139,12 @@ export default function Index() {
   // console.log("fonts", fontStyle);
 
   React.useEffect(() => {
+    const origSrc = src;
     try {
-      setParsed(parse(src.replace(/(\S)#/g, "$1 #")));
+      let src = origSrc;
+      // Add space before #, required by spec, not enforced by esphome
+      src = src.replace(/(\S)#/g, "$1 #");
+      setParsed(parse(src));
       setError(null);
     } catch (error) {
       console.log(error);
@@ -151,9 +155,19 @@ export default function Index() {
 
   const display = parsed.display?.[0];
   const pages = display?.pages;
-  const pageIds = pages ? pages.map((page) => page.id) : [];
+  const pageIds = React.useMemo(
+    () => (pages ? pages.map((page) => page?.id) : []),
+    [pages],
+  );
+  const [currentPageId, setCurrentPageId] = React.useState(
+    pages?.[0]?.id ?? "",
+  );
+  React.useEffect(() => {
+    if (!pageIds?.includes(currentPageId)) {
+      setCurrentPageId(pageIds[0]);
+    }
+  }, [pageIds, currentPageId]);
 
-  const [currentPageId, setCurrentPageId] = React.useState(pages?.[0].id ?? "");
   const model = display && getModel(display.platform, display.model);
   const { width, height } = model ?? { width: 256, height: 256 };
   const { COLOR_ON, COLOR_OFF } = model ?? {
@@ -161,7 +175,7 @@ export default function Index() {
     COLOR_OFF: [0, 0, 0],
   };
 
-  const page = pages?.find((page) => page.id === currentPageId);
+  const page = pages?.find((page) => page?.id === currentPageId);
   const lambda = (page ? page.lambda : display?.lambda) ?? "";
 
   React.useEffect(() => {
@@ -224,6 +238,7 @@ export default function Index() {
               id="currentPageId"
               value={currentPageId}
               onChange={(e) => setCurrentPageId(e.target.value)}
+              style={{ marginBottom: 15 }}
             >
               {pageIds.map((pageId) => (
                 <option key={pageId} value={pageId}>
