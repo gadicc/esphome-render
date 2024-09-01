@@ -25,7 +25,7 @@ const CodeMirror = React.memo(function CodeMirror(
   props: Parameters<typeof CodeMirrorOrig>[0],
 ) {
   const ref = React.useRef<ReactCodeMirrorRef>(null);
-  const { extensions, value, onChange, ...rest } = props;
+  const { extensions, value, onChange } = props;
   const valueRef = React.useRef<string | undefined>(value);
 
   const _onChange: ReactCodeMirrorProps["onChange"] = React.useCallback(
@@ -42,17 +42,15 @@ const CodeMirror = React.memo(function CodeMirror(
   );
 
   const cm = React.useMemo(() => {
-    console.log("cm render");
     return (
       <CodeMirrorOrig
         ref={ref}
         extensions={combinedExtensions}
         onChange={_onChange}
         value={valueRef.current}
-        {...rest}
       />
     );
-  }, [_onChange, combinedExtensions, rest]);
+  }, [_onChange, combinedExtensions]);
 
   return cm;
 });
