@@ -12,53 +12,10 @@ import { Render } from "./jrt";
 import { IconButton, Switch, TextField, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
 
+// @ts-expect-error: its ok
+import defaultSrc from "raw-loader!./demo.yaml";
+
 // console.log(JSCPP);
-
-// import src from "raw-loader!@/../tests/fixtures/s3b.yaml";
-
-const defaultSrc = `display:
-  - platform: ili9xxx
-    model: S3BOX
-    lambda: |-
-      auto blue = Color(0, 0, 255);
-      it.fill(id(black));
-      it.printf(10, 20, id(my_font), id(white), "Hello, %s!", name);
-      if (show)
-        it.line(50, 50, x2, 150);
-      it.printf(150, 120, id(icon_font_55), id(yellow), "\\U000F06E8");
-      it.printf(x2 + 3, 160, id(my_font), id(white), "x2: %d", x2);
-
-globals:
-  - id: name
-    type: std::string
-    initial_value: "world"
-  - id: show
-    type: bool
-    initial_value: true
-  - id: x2
-    type: int
-    initial_value: 150
-
-font:
-  - file: "https://github.com/BigBobbas/ESP32-S3-Box3-Custom-ESPHome/raw/main/fonts/consola.ttf"
-    id: my_font
-    size: 14
-    glyphs:
-      '&@!"''%()+=,-_.:°/$€£¥?0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyzÀàÁáÂâÃãÄäĀāĂăÅåǺǻẠạĄąÆæǼǽĆćĈĉČčĊċÇçĎďĐđÐðÈèÉéÊêẼẽĚěËëĒēĔĕĖėẸẹĘęĜĝǦǧĞğĠġĢģĤĥĦħıÌìÍíÎîĨĩÏïĪīĬĭİỊịĮįȷĴĵĶķĸĹĺĽľĻļŁłĿŀŃńÑñŇňŅņƝɲŊŋŉÒòÓóÔôÕõÖöŌōŎŏŐőỌọǪǫØøǾǿŒœŔŕŘřŖŗŚśŜŝŠšŞşȘșẞßŤťŢţȚțŦŧÞþÙùÚúÛûŨũÜüŪūŬŭŮůŰűỤụŲųẀẁẂẃŴŵẄẅỲỳÝýŶŷỸỹŸÿȲȳŹźŽžŻżĲĳƏə'
-  - file: "https://github.com/BigBobbas/ESP32-S3-Box3-Custom-ESPHome/raw/main/fonts/materialdesignicons-webfont.ttf"
-    id: icon_font_55
-    size: 45
-
-color:
-  - id: red
-    hex: FF0000
-  - id: black
-    hex: 000000
-  - id: white
-    hex: FFFFFF
-  - id: yellow
-    hex: FFFF00
-`;
 
 function useGlobals(globals: ESPHomeConfig["globals"]) {
   const [state, setState] = React.useState<Record<string, unknown>>({});
@@ -215,7 +172,15 @@ export default function Index() {
   ]);
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        maxHeight: "100%",
+        position: "relative",
+        overflow: "auto",
+      }}
+    >
       <Split>
         <div style={{ width: "50%" }}>
           <CodeMirror value={src} onChange={setSrc} />
