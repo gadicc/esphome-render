@@ -1,5 +1,8 @@
 import React from "react";
-import CodeMirrorOrig from "@uiw/react-codemirror";
+import CodeMirrorOrig, {
+  ReactCodeMirrorRef,
+  useCodeMirror,
+} from "@uiw/react-codemirror";
 import { parser as yamlParser } from "@lezer/yaml";
 import { parser as cppParser } from "@lezer/cpp";
 import { parseMixed } from "@lezer/common";
@@ -20,13 +23,27 @@ const _extensions = [mixedYaml];
 const CodeMirror = React.memo(function CodeMirror(
   props: Parameters<typeof CodeMirrorOrig>[0],
 ) {
-  const { extensions, ...rest } = props;
+  const ref = React.useRef<ReactCodeMirrorRef>(null);
+  const { extensions, value, ...rest } = props;
   const combinedExtensions = React.useMemo(
     () => [..._extensions, ...(extensions ?? [])],
     [extensions],
   );
 
-  return <CodeMirrorOrig extensions={combinedExtensions} {...rest} />;
+  React.useEffect(() => {
+    console.log(1, value, ref.current, ref.current?.view);
+    if (ref.current?.view) {
+      console.log(2, value);
+      ref.current.view.dispatch({
+        changes: {
+          from: 0,
+          insert: value,
+        },
+      });
+    }
+  }, [ref.current?.view]);
+
+  return <CodeMirrorOrig ref={ref} extensions={combinedExtensions} {...rest} />;
 });
 
 export default CodeMirror;

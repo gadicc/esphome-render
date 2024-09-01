@@ -2,7 +2,7 @@
 import { CRuntime, Variable } from "JSCPP";
 import { getContext } from "../util";
 
-export default {
+const idModule = {
   load: function (rt: CRuntime) {
     const context = getContext();
     const pchar = rt.normalPointerType(rt.charTypeLiteral);
@@ -39,3 +39,5 @@ export default {
     rt.regFunc(_id, "global", "id", [pchar], type);
   },
 };
+
+export default idModule;

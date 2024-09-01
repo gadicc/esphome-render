@@ -1,7 +1,7 @@
 // @ts-expect-error: :/
-import JSCPP, { CRuntime, Variable, ObjectVariable } from "JSCPP";
+import JSCPP, { CRuntime } from "JSCPP";
 import { ESPHomeConfig } from "./ESPHomeConfig";
-import { _resolveId, _resolveColor, getContext, Id, initContext } from "./util";
+import { getContext, Id, initContext } from "./util";
 
 import includes from "./includes";
 
@@ -12,7 +12,7 @@ const config = {
 // https://github.com/esphome/esphome/blob/caaae59ea9db397bc80e6e51504bd698ece059f3/esphome/core/__init__.py#L273
 const LAMBDA_PROG = /id\(\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\)(\.?)/g;
 // https://github.com/esphome/esphome/blob/caaae59ea9db397bc80e6e51504bd698ece059f3/esphome/config_validation.py#L1437
-const LAMBDA_ENTITY_ID_PROG = /\Wid\(\s*([a-zA-Z0-9_]+\.[.a-zA-Z0-9_]+)\s*\)/g;
+// const LAMBDA_ENTITY_ID_PROG = /\Wid\(\s*([a-zA-Z0-9_]+\.[.a-zA-Z0-9_]+)\s*\)/g;
 
 function prepareLambda(lambda: string, color: ESPHomeConfig["color"] = []) {
   const context = getContext();
@@ -108,6 +108,7 @@ export function run(
     },
   };
 
-  const interpreter = JSCPP.run(code, "", config);
+  // const interpreter =
+  JSCPP.run(code, "", config);
   return { doc: getContext().doc };
 }

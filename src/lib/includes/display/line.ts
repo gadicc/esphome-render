@@ -3,7 +3,7 @@ import type { CRuntime, Variable } from "JSCPP";
 import type { DisplayContext } from ".";
 import { componentsToHex } from "../color";
 
-export default {
+const line = {
   load(rt: CRuntime, ctx: DisplayContext) {
     const { context, DisplayIt, resolveColor } = ctx;
 
@@ -46,3 +46,5 @@ export default {
     );
   },
 };
+
+export default line;

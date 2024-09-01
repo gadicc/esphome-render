@@ -7,7 +7,7 @@ export function componentsToHex(r: number, g: number, b: number) {
 
 // https://esphome.io/api/color_8h_source
 // https://esphome.io/api/structesphome_1_1_color
-export default {
+const color = {
   load(rt: CRuntime) {
     // NB: esphome color.h uses a union for very convenient aliases but
     // we can't represent that in JavaScript.  So, we should consider
@@ -59,3 +59,5 @@ export default {
     );
   },
 };
+
+export default color;

@@ -76,7 +76,7 @@ function useGlobals(globals: ESPHomeConfig["globals"]) {
     }
   }, [globals]);
 
-  const setGlobal = React.useCallback((id: string, value: any) => {
+  const setGlobal = React.useCallback((id: string, value: unknown) => {
     console.log({ id, value });
     setState((state) => ({ ...state, [id]: value }));
   }, []);
@@ -188,7 +188,17 @@ export default function Index() {
       setError(error as Error);
     }
     // console.log(context);
-  }, [lambda, parsed.globals, globals, ids, width, height]);
+  }, [
+    lambda,
+    parsed.globals,
+    globals,
+    ids,
+    width,
+    height,
+    COLOR_ON,
+    COLOR_OFF,
+    parsed.color,
+  ]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>

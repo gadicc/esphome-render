@@ -2,7 +2,7 @@
 import type { CRuntime, Variable } from "JSCPP";
 import type { DisplayContext } from ".";
 
-export default {
+const fill = {
   load(rt: CRuntime, ctx: DisplayContext) {
     const { context, DisplayIt, resolveColor } = ctx;
 
@@ -35,3 +35,5 @@ export default {
     );
   },
 };
+
+export default fill;

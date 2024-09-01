@@ -13,7 +13,7 @@ export interface DisplayContext {
   DisplayIt: ReturnType<typeof CRuntime>["newClass"];
 }
 
-export default {
+const index = {
   load: function (rt: CRuntime) {
     const context = getContext();
     const resolveId = _resolveId.bind(null, rt);
@@ -27,3 +27,5 @@ export default {
     fill.load(rt, displayContext);
   },
 };
+
+export default index;

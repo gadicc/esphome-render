@@ -4,7 +4,7 @@ import printf from "printf";
 
 import type { DisplayContext } from ".";
 
-export default {
+const printfModule = {
   load(rt: CRuntime, ctx: DisplayContext) {
     const pchar = rt.normalPointerType(rt.charTypeLiteral);
     const { context, DisplayIt, resolveId, resolveColor } = ctx;
@@ -115,3 +115,5 @@ export default {
     );
   },
 };
+
+export default printfModule;
