@@ -175,17 +175,16 @@ export default function Index() {
     <div
       style={{
         width: "100%",
-        height: "100%",
-        maxHeight: "100%",
+        height: "100vh",
         position: "relative",
-        overflow: "auto",
+        overflow: "hidden",
       }}
     >
-      <Split>
-        <div style={{ width: "50%" }}>
+      <Split style={{ height: "100%" }}>
+        <div style={{ height: "100%", width: "50%", overflow: "auto" }}>
           <CodeMirror value={src} onChange={setSrc} />
         </div>
-        <div style={{ padding: 15 }}>
+        <div style={{ height: "100%", padding: 15, overflow: "auto" }}>
           <svg
             style={{ border: "1px solid black", width: 300 }}
             viewBox={`0 0 ${width} ${height}`}
