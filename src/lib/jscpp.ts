@@ -4,6 +4,7 @@ import { ESPHomeConfig } from "./ESPHomeConfig";
 import { getContext, Id, initContext } from "./util";
 
 import includes from "./includes";
+import { componentsToHex } from "./includes/color";
 
 const config = {
   includes,
@@ -78,6 +79,16 @@ export function run(
   },
 ) {
   initContext(ids, { width, height, COLOR_ON, COLOR_OFF });
+  const { doc } = getContext();
+  doc.children.push({
+    type: "rect",
+    x: 0,
+    y: 0,
+    width,
+    height,
+    fill: componentsToHex(...COLOR_OFF),
+  });
+
   const code = prepareLambda(lambda, color);
   // console.log("code", code);
 
@@ -93,7 +104,7 @@ export function run(
       // @ts-expect-error: later
       Object.entries(ids).forEach(([id, { type, entry, state }]) => {
         if (type === "globals") {
-          const initial_value = JSON.parse(entry.initial_value);
+          const initial_value = JSON.parse(entry.initial_value as string);
           const type = varTypes[entry.type];
           rt.defVar(
             id,
@@ -109,5 +120,5 @@ export function run(
 
   // const interpreter =
   JSCPP.run(code, "", config);
-  return { doc: getContext().doc };
+  return { doc };
 }

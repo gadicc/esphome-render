@@ -149,7 +149,7 @@ export default function Index() {
       if (docRef?.current?.children.length) {
         const doc = { children: [] };
         docRef.current = doc;
-        setDoc({ children: [] });
+        setDoc(doc);
       }
       return;
     }
