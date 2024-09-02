@@ -62,8 +62,6 @@ function prepareLambda(lambda: string, color: ESPHomeConfig["color"] = []) {
 export function run(
   lambda: string,
   {
-    globals,
-    globalState,
     color,
     ids,
     width,
@@ -71,8 +69,6 @@ export function run(
     COLOR_ON,
     COLOR_OFF,
   }: {
-    globals: ESPHomeConfig["globals"];
-    globalState: Record<string, unknown>;
     color: ESPHomeConfig["color"];
     ids: Record<string, Id>;
     width: number;
@@ -94,17 +90,20 @@ export function run(
         "std::string": rt.normalPointerType(rt.charTypeLiteral),
       };
 
-      if (globals)
-        globals.forEach((v) => {
-          const type = varTypes[v.type];
+      // @ts-expect-error: later
+      Object.entries(ids).forEach(([id, { type, entry, state }]) => {
+        if (type === "globals") {
+          const initial_value = JSON.parse(entry.initial_value);
+          const type = varTypes[entry.type];
           rt.defVar(
-            v.id,
+            id,
             type,
-            v.type === "std::string"
-              ? rt.makeCharArrayFromString(globalState[v.id] ?? v.initial_value)
-              : rt.val(type, globalState[v.id] ?? v.initial_value),
+            entry.type === "std::string"
+              ? rt.makeCharArrayFromString(state ?? initial_value)
+              : rt.val(type, state ?? initial_value),
           );
-        });
+        }
+      });
     },
   };
 

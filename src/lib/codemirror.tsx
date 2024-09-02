@@ -41,6 +41,15 @@ const CodeMirror = React.memo(function CodeMirror(
     [extensions],
   );
 
+  React.useEffect(() => {
+    if (value !== valueRef.current) {
+      ref.current?.view?.dispatch({
+        changes: { from: 0, to: valueRef.current?.length, insert: value },
+      });
+      valueRef.current = value;
+    }
+  }, [value]);
+
   const cm = React.useMemo(() => {
     return (
       <CodeMirrorOrig

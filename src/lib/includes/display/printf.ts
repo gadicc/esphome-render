@@ -45,15 +45,17 @@ const printfModule = {
         }),
       );
 
+      // Default: 20 (https://esphome.io/components/font#display-fonts)
+      // @ts-expect-error: TODO
+      const fontSize = _font.entry.size || 20;
+
       context.doc.children.push({
         type: "printf",
         x: x.v,
-        y: y.v,
+        y: y.v + fontSize,
         // @ts-expect-error: TODO
         fontFamily: _font.entry._fontFamily,
-        // Default: 20 (https://esphome.io/components/font#display-fonts)
-        // @ts-expect-error: TODO
-        fontSize: _font.entry.size || 20,
+        fontSize,
         text,
         color: _color,
       });

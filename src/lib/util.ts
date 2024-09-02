@@ -4,7 +4,7 @@ import { ESPHomeConfig } from "./ESPHomeConfig";
 
 export type Id =
   | { type: "font"; entry: ESPHomeConfig["font"][0] }
-  | { type: "globals"; entry: ESPHomeConfig["globals"][0] }
+  | { type: "globals"; entry: ESPHomeConfig["globals"][0]; state?: unknown }
   | { type: "color"; entry: ESPHomeConfig["color"][0] };
 
 // TODO, better name

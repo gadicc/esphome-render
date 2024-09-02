@@ -13,39 +13,37 @@ import { IconButton, Switch, TextField, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
 
 // @ts-expect-error: its ok
-import defaultSrc from "raw-loader!./demo.yaml";
+import simpleExample from "raw-loader!./examples/simple.yaml";
+// @ts-expect-error: its ok
+import s3customExample from "raw-loader!./examples/s3custom.yaml";
 
 // console.log(JSCPP);
 
-function useGlobals(globals: ESPHomeConfig["globals"]) {
+function useIdStates(ids: Record<string, Id>) {
   const [state, setState] = React.useState<Record<string, unknown>>({});
 
   React.useEffect(() => {
-    if (globals) {
-      const next = globals.reduce(
-        (acc, { id, initial_value }) => {
-          acc[id] = initial_value;
-          return acc;
-        },
-        {} as Record<string, unknown>,
-      );
-      setState(next);
+    const next = {} as Record<string, unknown>;
+    for (const id in ids) {
+      if ("initial_value" in ids[id].entry)
+        next[id] = JSON.parse(ids[id].entry.initial_value as string);
     }
-  }, [globals]);
+    setState(next);
+  }, [ids]);
 
-  const setGlobal = React.useCallback((id: string, value: unknown) => {
-    console.log({ id, value });
+  const setIdState = React.useCallback((id: string, value: unknown) => {
+    console.log("setIdState", { id, value });
     setState((state) => ({ ...state, [id]: value }));
   }, []);
 
-  return [state, setGlobal] as const;
+  return [state, setIdState] as const;
 }
 
 // TODO, rather do this in useEffect and only return a new object on change.
 function collectIds(config: ESPHomeConfig) {
   const ids = {} as Record<string, Id>;
   for (const type of ["globals", "font", "color"] as Id["type"][]) {
-    if (Array.isArray(config[type])) {
+    if (config?.[type] && Array.isArray(config[type])) {
       const entries = config[type];
       entries.forEach((entry) => {
         // @ts-expect-error: later
@@ -58,20 +56,31 @@ function collectIds(config: ESPHomeConfig) {
 }
 
 export default function Index() {
-  const [src, setSrc] = React.useState(defaultSrc);
+  const [src, setSrc] = React.useState(simpleExample);
   const [parsed, setParsed] = React.useState({} as ESPHomeConfig);
   const [error, setError] = React.useState<Error | null>(null);
+  const docRef = React.useRef<ReturnType<typeof run>["doc"]>();
   const [doc, setDoc] = React.useState<ReturnType<typeof run>["doc"]>({
     children: [],
   });
-  const ids = React.useMemo(() => collectIds(parsed), [parsed]);
-  const [globals, setGlobal] = useGlobals(parsed.globals);
-  // console.log("globals", globals);
+  const _ids = React.useMemo(() => collectIds(parsed), [parsed]);
+  const [state, setIdState] = useIdStates(_ids);
+  const ids = React.useMemo(() => {
+    const next = { ..._ids };
+    for (const id in next) {
+      // @ts-expect-error: later
+      if (state[id] !== undefined) next[id] = { ...next[id], state: state[id] };
+    }
+    // console.log("merge ids", _ids, state, next);
+    return next;
+  }, [_ids, state]);
+
   // console.log("ids", ids);
+  // console.log("doc", doc);
 
   const fontStyle = React.useMemo(() => {
     const byFamily = {} as Record<string, ESPHomeConfig["font"][0]>;
-    parsed.font?.forEach((font) => {
+    parsed?.font?.forEach((font) => {
       // TODO, rather use hash of url
       // @ts-expect-error: later
       const fontFamily = font.file.split("/").pop().split(".ttf")[0];
@@ -92,7 +101,7 @@ export default function Index() {
         )}
       </style>
     );
-  }, [parsed.font]);
+  }, [parsed?.font]);
   // console.log("fonts", fontStyle);
 
   React.useEffect(() => {
@@ -110,7 +119,7 @@ export default function Index() {
   }, [src]);
   // console.log(parsed);
 
-  const display = parsed.display?.[0];
+  const display = parsed?.display?.[0];
   const pages = display?.pages;
   const pageIds = React.useMemo(
     () => (pages ? pages.map((page) => page?.id) : []),
@@ -136,17 +145,18 @@ export default function Index() {
   const lambda = (page ? page.lambda : display?.lambda) ?? "";
 
   React.useEffect(() => {
-    // const parsed = cppParser.parse(lambda);
-    // console.log(parsed);
-  }, [lambda]);
-
-  React.useEffect(() => {
+    if (!lambda) {
+      if (docRef?.current?.children.length) {
+        const doc = { children: [] };
+        docRef.current = doc;
+        setDoc({ children: [] });
+      }
+      return;
+    }
     try {
       const { doc } = run(lambda, {
-        globals: parsed.globals,
-        globalState: globals,
-        color: parsed.color,
         ids,
+        color: parsed?.color,
         width,
         height,
         COLOR_ON,
@@ -154,22 +164,13 @@ export default function Index() {
       });
       setDoc(doc);
       setError(null);
+      docRef.current = doc;
     } catch (error) {
       console.log(error);
       setError(error as Error);
     }
     // console.log(context);
-  }, [
-    lambda,
-    parsed.globals,
-    globals,
-    ids,
-    width,
-    height,
-    COLOR_ON,
-    COLOR_OFF,
-    parsed.color,
-  ]);
+  }, [lambda, ids, width, height, COLOR_ON, COLOR_OFF, parsed?.color]);
 
   return (
     <div
@@ -182,6 +183,13 @@ export default function Index() {
     >
       <Split style={{ height: "100%" }}>
         <div style={{ height: "100%", width: "50%", overflow: "auto" }}>
+          <div style={{ padding: 10 }}>
+            <button onClick={() => setSrc("")}>Clear</button>{" "}
+            <button onClick={() => setSrc(simpleExample)}>Simple</button>{" "}
+            <button onClick={() => setSrc(s3customExample)}>
+              S3 Custom (WIP)
+            </button>
+          </div>
           <CodeMirror value={src} onChange={setSrc} />
         </div>
         <div style={{ height: "100%", padding: 15, overflow: "auto" }}>
@@ -211,42 +219,47 @@ export default function Index() {
               ))}
             </select>
           ) : null}
-          {parsed.globals ? (
+          {Object.values(state).length ? (
             <div>
-              <Typography variant="h6">Globals</Typography>
+              <Typography variant="h6">State</Typography>
               <table cellSpacing={5}>
                 <tbody>
-                  {parsed.globals.map(({ id, type }) => (
-                    <tr key={id}>
-                      <td align="right">
-                        <label htmlFor={id}>{id}</label>
-                      </td>
-                      <td>
-                        {type === "bool" ? (
-                          <Switch
-                            checked={!!globals[id]}
-                            onChange={(e) => setGlobal(id, e.target.checked)}
-                          />
-                        ) : type === "int" ? (
-                          <TextField
-                            size="small"
-                            type="number"
-                            sx={{ width: 100 }}
-                            value={globals[id]?.toString() ?? ""}
-                            onChange={(e) =>
-                              setGlobal(id, parseInt(e.target.value))
-                            }
-                          />
-                        ) : (
-                          <TextField
-                            size="small"
-                            value={globals[id] ?? ""}
-                            onChange={(e) => setGlobal(id, e.target.value)}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {Object.entries(ids)
+                    .filter(([, data]) => "state" in data)
+                    // @ts-expect-error: later... state in data
+                    .map(([id, { entry, state }]) => (
+                      <tr key={id}>
+                        <td align="right">
+                          <label htmlFor={id}>{id}</label>
+                        </td>
+                        <td>
+                          {/* @ts-expect-error: later */}
+                          {entry.type === "bool" ? (
+                            <Switch
+                              checked={!!state}
+                              onChange={(e) => setIdState(id, e.target.checked)}
+                            />
+                          ) : // @ts-expect-error: later
+                          entry.type === "int" ? (
+                            <TextField
+                              size="small"
+                              type="number"
+                              sx={{ width: 100 }}
+                              value={state.toString() ?? ""}
+                              onChange={(e) =>
+                                setIdState(id, parseInt(e.target.value))
+                              }
+                            />
+                          ) : (
+                            <TextField
+                              size="small"
+                              value={state ?? ""}
+                              onChange={(e) => setIdState(id, e.target.value)}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

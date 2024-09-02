@@ -2,16 +2,7 @@ display:
   - platform: ili9xxx
     model: S3BOX
     pages:
-      - id: demo
-        lambda: |-
-          auto blue = Color(0, 0, 255);
-          it.fill(id(black));
-          it.printf(10, 20, id(my_font), id(white), "Hello, %s!", name);
-          if (show)
-            it.line(50, 50, x2, 150);
-          it.printf(150, 120, id(icon_font_55), id(yellow), "\U000F06E8");
-          it.printf(x2 + 3, 160, id(my_font), id(white), "x2: %d", x2);
-      - id: custom_s3box
+      - id: idle_page
         lambda: |-
           it.fill(id(black));
           if(id(api_connection) == true) {
@@ -26,15 +17,22 @@ display:
           }
 
 globals:
-  - id: name
-    type: std::string
-    initial_value: "world"
-  - id: show
+  - id: wifi_connection
     type: bool
-    initial_value: true
-  - id: x2
+    restore_value: no
+    initial_value: "false"
+  - id: api_connection
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: mute_value
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: speaker_volume
     type: int
-    initial_value: 150
+    restore_value: no
+    initial_value: "5"
 
 font:
   - file: "https://github.com/BigBobbas/ESP32-S3-Box3-Custom-ESPHome/raw/main/fonts/consola.ttf"
@@ -46,11 +44,27 @@ font:
     size: 45
 
 color:
+  - id: green
+    hex: "75D15F"
   - id: red
-    hex: FF0000
-  - id: black
-    hex: 000000
-  - id: white
-    hex: FFFFFF
+    hex: "FF3131"
+  - id: blue
+    hex: "47B7E9"
+  - id: blue_drk
+    hex: "085296"
+  - id: amber
+    hex: "FBAB35"
+  - id: lime
+    hex: "20FC30"
+  - id: pink
+    hex: "D92BBC"
   - id: yellow
-    hex: FFFF00
+    hex: "FFC000"
+  - id: black
+    hex: "000000"
+  - id: white
+    hex: "ffffff"
+  - id: purple
+    hex: "73264D"
+  - id: light_blue
+    hex: "CFE2F3"
