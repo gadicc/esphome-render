@@ -27,6 +27,7 @@ const CodeMirror = React.memo(function CodeMirror(
   const ref = React.useRef<ReactCodeMirrorRef>(null);
   const { extensions, value, onChange } = props;
   const valueRef = React.useRef<string | undefined>(value);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>();
 
   const _onChange: ReactCodeMirrorProps["onChange"] = React.useCallback(
     (value: string, viewUpdate: ViewUpdate) => {
@@ -43,11 +44,17 @@ const CodeMirror = React.memo(function CodeMirror(
 
   React.useEffect(() => {
     if (value !== valueRef.current) {
-      ref.current?.view?.dispatch({
-        changes: { from: 0, to: valueRef.current?.length, insert: value },
-      });
-      valueRef.current = value;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        ref.current?.view?.dispatch({
+          changes: { from: 0, to: valueRef.current?.length, insert: value },
+        });
+        valueRef.current = value;
+      }, 500);
     }
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [value]);
 
   const cm = React.useMemo(() => {
