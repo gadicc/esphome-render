@@ -25,8 +25,18 @@ function useIdStates(ids: Record<string, Id>) {
   React.useEffect(() => {
     const next = {} as Record<string, unknown>;
     for (const id in ids) {
-      if ("initial_value" in ids[id].entry)
-        next[id] = JSON.parse(ids[id].entry.initial_value as string);
+      if ("initial_value" in ids[id].entry) {
+        let initial_value = ids[id].entry.type === "std::string" ? "" : 0;
+        try {
+          initial_value = JSON.parse(ids[id].entry.initial_value as string);
+        } catch (
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          error
+        ) {
+          //
+        }
+        next[id] = initial_value;
+      }
     }
     setState(next);
   }, [ids]);

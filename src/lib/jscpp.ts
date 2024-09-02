@@ -104,7 +104,15 @@ export function run(
       // @ts-expect-error: later
       Object.entries(ids).forEach(([id, { type, entry, state }]) => {
         if (type === "globals") {
-          const initial_value = JSON.parse(entry.initial_value as string);
+          let initial_value = entry.type === "std::string" ? "" : 0;
+          try {
+            initial_value = JSON.parse(entry.initial_value as string);
+          } catch (
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            error
+          ) {
+            //
+          }
           const type = varTypes[entry.type];
           rt.defVar(
             id,
