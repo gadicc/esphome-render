@@ -16,9 +16,11 @@ NB: this is a pet project in my spare time.
 
   - [ ] Implement (correctly) all the ESPHOME home APIs
   - [ ] Work with Top 3 ESPHome projects
+  - [ ] Test framework
 
 - **Long term**
 
+  - [ ] Sourcemaps and in-editor error highlighting in correct place
   - [ ] Accounts, ability to share and show user galleries
   - [ ] Ability to move objects in the rendered display with a mouse
         and have those changes reflected back in the code.

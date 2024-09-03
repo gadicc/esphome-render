@@ -274,6 +274,13 @@ export default function Index() {
               </table>
             </div>
           ) : null}
+          <br />
+          <div style={{ width: 500 }}>
+            NB: This is a <b>proof of concept</b> only.{" "}
+            <i>Most APIs are not implemented yet</i>; code other than what is
+            already shown here is unlikely to work. Completing the API a huge
+            task and will be the result of public interest.
+          </div>
         </div>
       </Split>
       {error && (
