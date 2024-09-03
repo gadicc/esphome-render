@@ -73,7 +73,6 @@ export default function Index() {
   const [src, setSrc] = React.useState(simpleExample);
   const [parsed, setParsed] = React.useState({} as ESPHomeConfig);
   const [error, setError] = React.useState<Error | null>(null);
-  const docRef = React.useRef<ReturnType<typeof run>["doc"]>();
   const [doc, setDoc] = React.useState<ReturnType<typeof run>["doc"]>({
     children: [],
   });
@@ -150,23 +149,19 @@ export default function Index() {
 
   const model = display && getModel(display.platform, display.model);
   const { width, height } = model ?? { width: 256, height: 256 };
-  const { COLOR_ON, COLOR_OFF } = model ?? {
-    COLOR_ON: [255, 255, 255],
-    COLOR_OFF: [0, 0, 0],
-  };
+  const { COLOR_ON, COLOR_OFF } = React.useMemo(
+    () =>
+      model ?? {
+        COLOR_ON: [255, 255, 255],
+        COLOR_OFF: [0, 0, 0],
+      },
+    [model],
+  );
 
   const page = pages?.find((page) => page?.id === currentPageId);
   const lambda = (page ? page.lambda : display?.lambda) ?? "";
 
   React.useEffect(() => {
-    if (!lambda) {
-      if (docRef?.current?.children.length) {
-        const doc = { children: [] };
-        docRef.current = doc;
-        setDoc(doc);
-      }
-      return;
-    }
     try {
       const { doc } = run(lambda, {
         ids,
@@ -178,7 +173,6 @@ export default function Index() {
       });
       setDoc(doc);
       setError(null);
-      docRef.current = doc;
     } catch (error) {
       console.log(error);
       setError(error as Error);
