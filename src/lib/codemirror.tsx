@@ -41,7 +41,7 @@ const mixedYamlParser = yamlParser.configure({
             return cx.column(before.from, 1);
           if (before.name == "QuotedLiteral") return null;
           if (before.name == "Literal") {
-            let col = cx.column(before.from, 1);
+            const col = cx.column(before.from, 1);
             if (col == cx.lineIndent(before.from, 1)) return col; // Start on own line
             if (before.to > cx.pos) return null;
           }
@@ -66,7 +66,7 @@ const mixedYamlLanguage = LRLanguage.define({
   parser: mixedYamlParser,
   languageData: {
     commentTokens: { line: "#" },
-    indentOnInput: /^\s*[\]\}]$/,
+    indentOnInput: /^\s*[\]}]$/,
   },
 });
 
