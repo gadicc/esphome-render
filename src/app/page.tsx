@@ -25,7 +25,10 @@ function useIdStates(ids: Record<string, Id>) {
   React.useEffect(() => {
     const next = {} as Record<string, unknown>;
     for (const id in ids) {
-      if ("initial_value" in ids[id].entry) {
+      if (
+        typeof ids[id]?.entry === "object" &&
+        "initial_value" in ids[id].entry
+      ) {
         let initial_value = ids[id].entry.type === "std::string" ? "" : 0;
         try {
           initial_value = JSON.parse(ids[id].entry.initial_value as string);
@@ -56,6 +59,7 @@ function collectIds(config: ESPHomeConfig) {
     if (config?.[type] && Array.isArray(config[type])) {
       const entries = config[type];
       entries.forEach((entry) => {
+        if (!entry) return;
         // @ts-expect-error: later
         ids[entry.id] = { type, entry };
       });
